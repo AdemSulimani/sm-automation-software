@@ -56,7 +56,7 @@ export function ChannelDetail() {
     if (!channelId || !window.confirm('Jeni të sigurt që dëshironi ta fshini këtë kanal?')) return;
     setDeleting(true);
     apiRequest(`/api/channels/${channelId}`, { method: 'DELETE' })
-      .then(() => navigate('/channels', { replace: true }))
+      .then(() => navigate('/app/channels', { replace: true }))
       .catch((err) => setError(err instanceof Error ? err.message : 'Gabim gjatë fshirjes.'))
       .finally(() => setDeleting(false));
   }
@@ -68,7 +68,7 @@ export function ChannelDetail() {
   return (
     <div className="page-channel-detail">
       <div className="channel-detail-header">
-        <Link to="/channels" className="back-link">← Kanale</Link>
+        <Link to="/app/channels" className="back-link">← Kanale</Link>
         <h1>
           {CHANNEL_PLATFORM_LABELS[channel.platform as ChannelPlatform]}
           {channel.name ? `: ${channel.name}` : ''}

@@ -12,7 +12,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <div className="auth-loading">Duke ngarkuar…</div>;
   }
   if (!token) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname.startsWith('/app') ? location : { pathname: '/app' } }} replace />;
   }
   return <>{children}</>;
 }

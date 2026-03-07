@@ -13,19 +13,19 @@ export interface NavItem {
   role: UserRole;
 }
 
-/** Radhitja e menysë: së pari faqet e përbashkëta, pastaj vetëm admin. */
+/** Rrugët e panelit (nën /app). Radhitja e menysë: së pari faqet e përbashkëta, pastaj vetëm admin. */
 export const navItems: NavItem[] = [
   // Të dyja rolet
-  { path: '/', label: 'Paneli', role: 'client' },
-  { path: '/profile', label: 'Profili im', role: 'client' },
-  { path: '/channels', label: 'Kanale', role: 'client' },
-  { path: '/inbox', label: 'Inbox', role: 'client' },
-  { path: '/automation', label: 'Automatikë', role: 'client' },
-  { path: '/settings', label: 'Cilësime', role: 'client' },
-  { path: '/chatbot', label: 'Chatbot ON/OFF', role: 'client' },
-  // Vetëm admin (Klientët, Përgjigje manuale kur hyn te një klient)
-  { path: '/klientet', label: 'Klientët', role: 'admin' },
-  { path: '/manual-reply', label: 'Përgjigje manuale', role: 'admin' },
+  { path: '/app', label: 'Paneli', role: 'client' },
+  { path: '/app/profile', label: 'Profili im', role: 'client' },
+  { path: '/app/channels', label: 'Kanale', role: 'client' },
+  { path: '/app/inbox', label: 'Inbox', role: 'client' },
+  { path: '/app/automation', label: 'Automatikë', role: 'client' },
+  { path: '/app/settings', label: 'Cilësime', role: 'client' },
+  { path: '/app/chatbot', label: 'Chatbot ON/OFF', role: 'client' },
+  // Vetëm admin
+  { path: '/app/klientet', label: 'Klientët', role: 'admin' },
+  { path: '/app/manual-reply', label: 'Përgjigje manuale', role: 'admin' },
 ];
 
 /**

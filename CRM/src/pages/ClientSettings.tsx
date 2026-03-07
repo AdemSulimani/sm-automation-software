@@ -72,7 +72,7 @@ export function ClientSettings() {
   return (
     <div className="page-settings page-client-settings">
       <div className="settings-header">
-        <Link to="/klientet" className="back-link">← Klientët</Link>
+        <Link to="/app/klientet" className="back-link">← Klientët</Link>
         <h1>Cilësime: {user.name}</h1>
         <p className="settings-email">{user.email}</p>
       </div>
@@ -121,7 +121,7 @@ export function ClientSettings() {
           <ul className="settings-channel-links">
             {channels.map((c) => (
               <li key={c._id}>
-                <Link to={`/channels/${c._id}`}>
+                <Link to={`/app/channels/${c._id}`}>
                   {CHANNEL_PLATFORM_LABELS[c.platform as ChannelPlatform]}
                   {c.name ? `: ${c.name}` : ''}
                 </Link>

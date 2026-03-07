@@ -90,7 +90,7 @@ export function InboxThread() {
   return (
     <div className="page-inbox-thread">
       <div className="thread-header">
-        <Link to="/inbox" className="back-link">← Inbox</Link>
+        <Link to="/app/inbox" className="back-link">← Inbox</Link>
         <h1>
           Bisedë me {conversation.platformUserId}
           <span className="thread-channel">{getChannelLabel(conversation)}</span>

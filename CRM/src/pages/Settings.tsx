@@ -95,12 +95,12 @@ export function Settings() {
           Për udhëzime specifike për një kanal (Instagram, Facebook, etj.), hapni kanalin dhe ndryshoni fushën “Udhëzime për AI”.
         </p>
         {channels.length === 0 ? (
-          <p className="settings-empty">Nuk keni kanale. <Link to="/channels">Shtoni një kanal</Link>.</p>
+          <p className="settings-empty">Nuk keni kanale. <Link to="/app/channels">Shtoni një kanal</Link>.</p>
         ) : (
           <ul className="settings-channel-links">
             {channels.map((c) => (
               <li key={c._id}>
-                <Link to={`/channels/${c._id}`}>
+                <Link to={`/app/channels/${c._id}`}>
                   {CHANNEL_PLATFORM_LABELS[c.platform as ChannelPlatform]}
                   {c.name ? `: ${c.name}` : ''}
                 </Link>

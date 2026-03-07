@@ -58,7 +58,7 @@ export function Klientet() {
               <td>{u.role}</td>
               <td>
                 {u.role === 'client' && (
-                  <Link to={`/klientet/${u._id}/cilesime`} className="link-settings">
+                  <Link to={`/app/klientet/${u._id}/cilesime`} className="link-settings">
                     Cilësime
                   </Link>
                 )}
