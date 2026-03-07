@@ -4,6 +4,9 @@ import { Layout, ProtectedRoute, AdminRoute } from './components';
 import {
   Login,
   Register,
+  Landing,
+  Privacy,
+  Terms,
   Dashboard,
   Klientet,
   ClientSettings,
@@ -19,17 +22,27 @@ import {
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
   if (loading) return <div className="auth-loading">Duke ngarkuar…</div>;
-  if (token) return <Navigate to="/" replace />;
+  if (token) return <Navigate to="/app" replace />;
   return <>{children}</>;
+}
+
+function LandingOrRedirect() {
+  const { token, loading } = useAuth();
+  if (loading) return <div className="auth-loading">Duke ngarkuar…</div>;
+  if (token) return <Navigate to="/app" replace />;
+  return <Landing />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingOrRedirect />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
       <Route
-        path="/"
+        path="/app"
         element={
           <ProtectedRoute>
             <Layout />

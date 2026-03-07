@@ -21,7 +21,7 @@ export function Register() {
     setLoading(true);
     try {
       await register(name, email, password);
-      navigate('/', { replace: true });
+      navigate('/app', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim në regjistrim.');
     } finally {

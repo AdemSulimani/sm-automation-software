@@ -42,7 +42,7 @@ export function Layout() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                end={item.path === '/'}
+                end={item.path === '/app'}
               >
                 {item.label}
               </NavLink>

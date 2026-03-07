@@ -20,11 +20,11 @@ export function Login() {
     try {
       await login(email, password);
       const user = getStoredUser();
-      const target = from && from.startsWith('/') ? from : undefined;
+      const target = from && from.startsWith('/app') ? from : undefined;
       if (user?.role === 'admin') {
-        navigate(target ?? '/klientet', { replace: true });
+        navigate(target ?? '/app/klientet', { replace: true });
       } else {
-        navigate(target ?? '/', { replace: true });
+        navigate(target ?? '/app', { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim në hyrje.');

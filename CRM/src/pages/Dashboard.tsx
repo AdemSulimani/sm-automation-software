@@ -57,10 +57,10 @@ export function Dashboard() {
             </div>
           </div>
           <div className="dashboard-shortcuts">
-            <Link to="/klientet" className="dashboard-shortcut">
+            <Link to="/app/klientet" className="dashboard-shortcut">
               Shiko klientët
             </Link>
-            <Link to="/inbox" className="dashboard-shortcut">
+            <Link to="/app/inbox" className="dashboard-shortcut">
               Inbox
             </Link>
           </div>
@@ -78,10 +78,10 @@ export function Dashboard() {
             </div>
           </div>
           <div className="dashboard-shortcuts">
-            <Link to="/inbox" className="dashboard-shortcut">
+            <Link to="/app/inbox" className="dashboard-shortcut">
               Inbox
             </Link>
-            <Link to="/settings" className="dashboard-shortcut">
+            <Link to="/app/settings" className="dashboard-shortcut">
               Cilësime
             </Link>
           </div>

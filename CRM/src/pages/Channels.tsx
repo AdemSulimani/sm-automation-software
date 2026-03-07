@@ -49,7 +49,7 @@ export function Channels() {
           {channels.map((ch) => (
             <li key={ch._id} className="channel-card">
               <div className="channel-card-inner">
-                <Link to={`/channels/${ch._id}`} className="channel-card-link">
+                <Link to={`/app/channels/${ch._id}`} className="channel-card-link">
                   <span className="channel-platform">{CHANNEL_PLATFORM_LABELS[ch.platform as ChannelPlatform]}</span>
                   <span className="channel-name">{ch.name || 'Pa emër'}</span>
                   <span className={`channel-status channel-status--${ch.status}`}>

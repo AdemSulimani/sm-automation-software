@@ -1,14 +1,14 @@
 import { useLocation } from 'react-router-dom';
 
 const PATH_TITLES: Record<string, string> = {
-  '/profile': 'Profili im',
-  '/channels': 'Kanale',
-  '/inbox': 'Inbox',
-  '/settings': 'Cilësime',
-  '/automation': 'Automatikë',
-  '/keyword-responses': 'Përgjigje me fjalëkyç',
-  '/chatbot': 'Chatbot ON/OFF',
-  '/manual-reply': 'Përgjigje manuale',
+  '/app/profile': 'Profili im',
+  '/app/channels': 'Kanale',
+  '/app/inbox': 'Inbox',
+  '/app/settings': 'Cilësime',
+  '/app/automation': 'Automatikë',
+  '/app/keyword-responses': 'Përgjigje me fjalëkyç',
+  '/app/chatbot': 'Chatbot ON/OFF',
+  '/app/manual-reply': 'Përgjigje manuale',
 };
 
 /**

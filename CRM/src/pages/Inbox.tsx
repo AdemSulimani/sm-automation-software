@@ -101,7 +101,7 @@ export function Inbox() {
         <ul className="conversations-list">
           {conversations.map((conv) => (
             <li key={conv._id}>
-              <Link to={`/inbox/${conv._id}`} className="conversation-row">
+              <Link to={`/app/inbox/${conv._id}`} className="conversation-row">
                 <span className="conv-user">{conv.platformUserId}</span>
                 <span className="conv-channel">{getChannelLabel(conv)}</span>
                 <span className="conv-date">{formatDate(conv.lastMessageAt)}</span>
