@@ -51,10 +51,6 @@ export interface ApiError {
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
-function isApiError(r: ApiResponse<unknown>): r is ApiError {
-  return r.success === false;
-}
-
 /** 401 → fshirja e tokenit dhe ridrejtimi te Login. */
 function handleUnauthorized(): never {
   clearStoredAuth();

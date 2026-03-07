@@ -18,7 +18,7 @@ interface MeUser {
 }
 
 export function Settings() {
-  const [user, setUser] = useState<MeUser | null>(null);
+  const [_user, setUser] = useState<MeUser | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [companyInfo, setCompanyInfo] = useState('');
   const [loading, setLoading] = useState(true);

@@ -55,7 +55,7 @@ export function Automation() {
     apiRequest<Channel[]>(`/api/channels${query}`)
       .then((data) => {
         setChannels(Array.isArray(data) ? data : []);
-        setChannelId((prev) => (data?.length ? (data as Channel[])[0]?._id ?? '' : ''));
+        setChannelId(data?.length ? (data as Channel[])[0]?._id ?? '' : '');
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gabim në ngarkim.'))
       .finally(() => setLoadingChannels(false));
