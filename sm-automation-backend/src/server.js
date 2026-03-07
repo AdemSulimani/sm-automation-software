@@ -5,6 +5,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { connectDB } = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
@@ -19,6 +20,9 @@ const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// CORS – lejon kërkesat nga frontendi (localhost:5173)
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 
 // Middleware për JSON
 app.use(express.json());
