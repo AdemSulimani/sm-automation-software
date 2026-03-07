@@ -8,11 +8,14 @@ const express = require('express');
 const { connectDB } = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const metaWebhookRoutes = require('./routes/metaWebhookRoutes');
 const viberWebhookRoutes = require('./routes/viberWebhookRoutes');
 const channelRoutes = require('./routes/channelRoutes');
+const conversationRoutes = require('./routes/conversationRoutes');
 const automationRuleRoutes = require('./routes/automationRuleRoutes');
 const keywordResponseRoutes = require('./routes/keywordResponseRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,11 +25,14 @@ app.use(express.json());
 
 // Rrugët e API
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/webhooks/meta', metaWebhookRoutes);
 app.use('/api/webhooks/viber', viberWebhookRoutes);
 app.use('/api/channels', channelRoutes);
+app.use('/api/conversations', conversationRoutes);
 app.use('/api/automation-rules', automationRuleRoutes);
 app.use('/api/keyword-responses', keywordResponseRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Rrugë test
 app.get('/api/health', (req, res) => {

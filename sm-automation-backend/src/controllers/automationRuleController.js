@@ -6,9 +6,12 @@
 const Channel = require('../models/Channel');
 const AutomationRule = require('../models/AutomationRule');
 
-const ensureUserOwnsChannel = async (userId, channelId) => {
-  const channel = await Channel.findOne({ _id: channelId, userId });
-  return channel;
+/** Admin mund të aksesojë çdo channel; klienti vetëm channelet e veta. */
+const ensureUserCanAccessChannel = async (req, channelId) => {
+  const channel = await Channel.findOne({ _id: channelId }).lean();
+  if (!channel) return null;
+  if (req.user.role === 'admin') return channel;
+  return channel.userId && channel.userId.toString() === req.userId.toString() ? channel : null;
 };
 
 /**
@@ -20,7 +23,7 @@ const list = async (req, res, next) => {
     if (!channelId) {
       return res.status(400).json({ success: false, message: 'channelId në query është i detyrueshëm.' });
     }
-    const channel = await ensureUserOwnsChannel(req.userId, channelId);
+    const channel = await ensureUserCanAccessChannel(req, channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet ose nuk ju përket.' });
     }
@@ -40,7 +43,7 @@ const getOne = async (req, res, next) => {
     if (!rule) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk u gjet.' });
     }
-    const channel = await ensureUserOwnsChannel(req.userId, rule.channelId._id);
+    const channel = await ensureUserCanAccessChannel(req, rule.channelId._id ?? rule.channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk u gjet ose nuk ju përket.' });
     }
@@ -60,7 +63,7 @@ const create = async (req, res, next) => {
     if (!channelId) {
       return res.status(400).json({ success: false, message: 'channelId është i detyrueshëm.' });
     }
-    const channel = await ensureUserOwnsChannel(req.userId, channelId);
+    const channel = await ensureUserCanAccessChannel(req, channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet ose nuk ju përket.' });
     }
@@ -89,7 +92,7 @@ const update = async (req, res, next) => {
     if (!rule) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk u gjet.' });
     }
-    const channel = await ensureUserOwnsChannel(req.userId, rule.channelId);
+    const channel = await ensureUserCanAccessChannel(req, rule.channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk ju përket.' });
     }
@@ -117,7 +120,7 @@ const remove = async (req, res, next) => {
     if (!rule) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk u gjet.' });
     }
-    const channel = await ensureUserOwnsChannel(req.userId, rule.channelId);
+    const channel = await ensureUserCanAccessChannel(req, rule.channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk ju përket.' });
     }

@@ -1,2 +1,4 @@
 // Reusable UI elements - export components from here
-// Example: export { Button } from './Button';
+export { ProtectedRoute } from './ProtectedRoute';
+export { AdminRoute } from './AdminRoute';
+export { Layout } from './Layout';

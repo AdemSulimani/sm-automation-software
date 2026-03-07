@@ -18,6 +18,15 @@ const { getReply } = require('./aiService');
 /** Numri maksimal i mesazheve të fundit për kontekstin AI */
 const RECENT_MESSAGES_LIMIT = 10;
 
+/** Vonesë 1–3 sekonda para dërgesës së përgjigjes, që chatbot të duket më natyral. */
+const REPLY_DELAY_MS_MIN = 1000;
+const REPLY_DELAY_MS_MAX = 3000;
+
+function delayReply() {
+  const ms = Math.floor(Math.random() * (REPLY_DELAY_MS_MAX - REPLY_DELAY_MS_MIN + 1)) + REPLY_DELAY_MS_MIN;
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Gjen ose krijon konversacion për channelId + platformUserId dhe kthen kontekst.
  *
@@ -227,6 +236,18 @@ async function processIncomingMessage(normalizedMessage) {
   const conversation = await getOrCreateConversation(channelId, senderId);
   const recentMessagesList = await getRecentMessagesForConversation(conversation._id);
   await saveMessage(conversation._id, 'in', messageText || '', mid);
+  await upsertConversationLastMessage(channelId, senderId);
+
+  // Kur biznesi ka përgjigjur manual (botPaused), mos dërgo përgjigje automatike; çaktivizo pause që boti të përgjigjet te mesazhi i ardhshëm.
+  if (conversation.botPaused) {
+    await Conversation.findByIdAndUpdate(conversation._id, { $set: { botPaused: false } });
+    return;
+  }
+
+  // Kur chatbot është OFF (status !== 'active'), mos dërgo përgjigje automatike – vetëm ruaj mesazhin (tashmë u ruajt) dhe përditëso konversacionin. Përgjigjet vetëm manual reply.
+  if (channel.status !== 'active') {
+    return;
+  }
 
   // 1) Automation rules (sipas priority, më i lartë më parë)
   const automationRules = await AutomationRule.find({
@@ -240,6 +261,7 @@ async function processIncomingMessage(normalizedMessage) {
   for (const rule of automationRules) {
     if (automationRuleMatches(rule, pipelineCtx)) {
       const message = buildResponsePayload(rule.responseType, rule.responsePayload);
+      await delayReply();
       await sendMessage(channel, senderId, message);
       await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
@@ -262,6 +284,7 @@ async function processIncomingMessage(normalizedMessage) {
         : (kw.responsePayload && typeof kw.responsePayload === 'object'
           ? (kw.responsePayload.text != null ? { text: kw.responsePayload.text } : kw.responsePayload)
           : { text: '' });
+      await delayReply();
       await sendMessage(channel, senderId, message);
       await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
@@ -281,6 +304,7 @@ async function processIncomingMessage(normalizedMessage) {
     conversationContext,
     companyInfoText
   );
+  await delayReply();
   await sendMessage(channel, senderId, { text: aiReply });
   await saveMessage(conversation._id, 'out', { text: aiReply });
   await upsertConversationLastMessage(channelId, senderId);

@@ -32,4 +32,15 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+/**
+ * Kërkon që përdoruesi të jetë admin. Duhet përdorur pas protect.
+ */
+const requireAdmin = (req, res, next) => {
+  const role = req.user?.role ?? 'client';
+  if (role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Vetëm admin ka të drejtë.' });
+  }
+  next();
+};
+
+module.exports = { protect, requireAdmin };

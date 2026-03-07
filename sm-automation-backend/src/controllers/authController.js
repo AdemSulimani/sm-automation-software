@@ -26,7 +26,7 @@ const register = async (req, res, next) => {
     const token = generateToken(user._id);
     res.status(201).json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email },
+      data: { id: user._id, name: user.name, email: user.email, role: user.role || 'client' },
       token,
     });
   } catch (err) {
@@ -47,7 +47,7 @@ const login = async (req, res, next) => {
     const token = generateToken(user._id);
     res.json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email },
+      data: { id: user._id, name: user.name, email: user.email, role: user.role || 'client' },
       token,
     });
   } catch (err) {
@@ -64,7 +64,9 @@ const getMe = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'Përdoruesi nuk u gjet.' });
     }
-    res.json({ success: true, data: user });
+    const data = user.toObject ? user.toObject() : user;
+    data.role = data.role || 'client';
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // Rol për ndarje admin / client: admin sheh të gjithë klientët dhe mund të “hyjë si” klient; client sheh vetëm të dhënat e veta.
+    role: {
+      type: String,
+      enum: ['admin', 'client'],
+      default: 'client',
+    },
   },
   { timestamps: true }
 );
