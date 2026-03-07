@@ -45,8 +45,16 @@ const getOne = async (req, res, next) => {
  */
 const create = async (req, res, next) => {
   try {
-    const { platform, platformPageId, viberBotId, accessToken, webhookVerifyToken, status, name } =
-      req.body;
+    const {
+      platform,
+      platformPageId,
+      viberBotId,
+      accessToken,
+      webhookVerifyToken,
+      status,
+      name,
+      aiInstructions,
+    } = req.body;
     const channel = await Channel.create({
       userId: req.userId,
       platform,
@@ -56,6 +64,7 @@ const create = async (req, res, next) => {
       webhookVerifyToken: webhookVerifyToken ?? null,
       status: status || 'active',
       name: name ?? null,
+      aiInstructions: aiInstructions ?? '',
     });
     const data = channel.toObject();
     data.accessToken = '***';
@@ -65,14 +74,27 @@ const create = async (req, res, next) => {
   }
 };
 
+/** Fushat e lejuara për përditësim të channel-it (jo userId, platform, platformPageId, viberBotId). */
+const ALLOWED_CHANNEL_UPDATE_FIELDS = [
+  'name',
+  'status',
+  'webhookVerifyToken',
+  'accessToken',
+  'aiInstructions',
+];
+
 /**
- * Përditëson një channel; vetëm nëse i përket përdoruesit.
+ * Përditëson një channel; vetëm nëse i përket përdoruesit. Përditëson vetëm fushat e lejuara.
  */
 const update = async (req, res, next) => {
   try {
+    const updates = {};
+    for (const key of ALLOWED_CHANNEL_UPDATE_FIELDS) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
     const channel = await Channel.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },
-      req.body,
+      updates,
       { new: true, runValidators: true }
     );
     if (!channel) {

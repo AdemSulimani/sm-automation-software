@@ -47,6 +47,12 @@ const channelSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    // Override për AI: nëse plotësohet, përdoret në vend të User.companyInfo për këtë kanal
+    aiInstructions: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );

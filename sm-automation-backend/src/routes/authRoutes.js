@@ -1,14 +1,17 @@
 /**
- * Rrugët e API për autentifikim: /register, /login.
- * Përdor authController për logjikën dhe validate për validim (nëse përdor Joi).
+ * Rrugët e API për autentifikim: /register, /login, /me (profili i përdoruesit të loguar).
  */
 
 const express = require('express');
-const { register, login } = require('../controllers/authController');
+const { protect } = require('../middleware/auth');
+const { register, login, getMe, updateMe } = require('../controllers/authController');
 
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
+
+router.get('/me', protect, getMe);
+router.patch('/me', protect, updateMe);
 
 module.exports = router;
