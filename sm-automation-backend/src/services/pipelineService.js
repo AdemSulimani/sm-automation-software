@@ -4,9 +4,19 @@
  * përpunon mesazhin dhe dërgon përgjigjen përmes outbound service.
  */
 
-const { Channel, AutomationRule, KeywordResponse, Conversation } = require('../models');
+const {
+  Channel,
+  AutomationRule,
+  KeywordResponse,
+  Conversation,
+  User,
+  Message,
+} = require('../models');
 const { sendMessage } = require('./outboundService');
 const { getReply } = require('./aiService');
+
+/** Numri maksimal i mesazheve të fundit për kontekstin AI */
+const RECENT_MESSAGES_LIMIT = 10;
 
 /**
  * Gjen ose krijon konversacion për channelId + platformUserId dhe kthen kontekst.
@@ -26,6 +36,48 @@ async function getConversationContext(channelId, senderId) {
   const lastMessageAt = conversation?.lastMessageAt || null;
 
   return { conversation, lastMessageAt, isFirstMessage };
+}
+
+/**
+ * Gjen ose krijon konversacion dhe kthen dokumentin (për conversationId te Message).
+ * Nuk përditëson lastMessageAt – bëhet në fund me upsertConversationLastMessage.
+ */
+async function getOrCreateConversation(channelId, senderId) {
+  const platformUserId = String(senderId);
+  let conversation = await Conversation.findOne({ channelId, platformUserId }).exec();
+  if (!conversation) {
+    conversation = await Conversation.create({ channelId, platformUserId });
+  }
+  return conversation;
+}
+
+/**
+ * Ruaj mesazh në Message (in ose out) për historik dhe kontekst AI.
+ */
+async function saveMessage(conversationId, direction, content, platformMessageId = null) {
+  const payload =
+    typeof content === 'string' ? { text: content } : content && typeof content === 'object' ? content : { text: '' };
+  await Message.create({
+    conversationId,
+    direction,
+    content: payload,
+    platformMessageId: platformMessageId || undefined,
+  });
+}
+
+/**
+ * Merr mesazhet e fundit të konversacionit për kontekst AI (format: { direction, content }), në rend kronologjik.
+ */
+async function getRecentMessagesForConversation(conversationId, limit = RECENT_MESSAGES_LIMIT) {
+  const messages = await Message.find({ conversationId })
+    .sort({ timestamp: -1 })
+    .limit(limit)
+    .lean()
+    .exec();
+  return messages.reverse().map((m) => ({
+    direction: m.direction,
+    content: m.content,
+  }));
 }
 
 /**
@@ -117,6 +169,27 @@ function keywordResponseMatches(kwResp, messageText) {
 }
 
 /**
+ * Nxjerr tekstin e informacioneve për AI për një channel: aiInstructions nëse ka, përndryshe companyInfo nga User.
+ *
+ * @param {object} channel - Dokumenti Channel (me userId, aiInstructions)
+ * @returns {Promise<string>}
+ */
+async function getCompanyInfoForChannel(channel) {
+  const channelInstructions =
+    channel.aiInstructions && typeof channel.aiInstructions === 'string'
+      ? channel.aiInstructions.trim()
+      : '';
+  if (channelInstructions) return channelInstructions;
+
+  const user = await User.findById(channel.userId).select('companyInfo').lean().exec();
+  const companyInfo =
+    user && user.companyInfo && typeof user.companyInfo === 'string'
+      ? user.companyInfo.trim()
+      : '';
+  return companyInfo;
+}
+
+/**
  * Përditëson (ose krijon) konversacionin pas përpunimit të mesazhit.
  */
 async function upsertConversationLastMessage(channelId, senderId) {
@@ -134,7 +207,7 @@ async function upsertConversationLastMessage(channelId, senderId) {
  * @param {object} normalizedMessage - { channelId, senderId, messageText, platform?, mid? }
  */
 async function processIncomingMessage(normalizedMessage) {
-  const { channelId, senderId, messageText } = normalizedMessage;
+  const { channelId, senderId, messageText, mid } = normalizedMessage;
   if (!channelId || senderId == null) return;
 
   const channel = await Channel.findById(channelId).exec();
@@ -150,6 +223,11 @@ async function processIncomingMessage(normalizedMessage) {
     messageText: messageText || '',
   };
 
+  // Konversacioni dhe historiku për Message (hapi 6)
+  const conversation = await getOrCreateConversation(channelId, senderId);
+  const recentMessagesList = await getRecentMessagesForConversation(conversation._id);
+  await saveMessage(conversation._id, 'in', messageText || '', mid);
+
   // 1) Automation rules (sipas priority, më i lartë më parë)
   const automationRules = await AutomationRule.find({
     channelId,
@@ -163,6 +241,7 @@ async function processIncomingMessage(normalizedMessage) {
     if (automationRuleMatches(rule, pipelineCtx)) {
       const message = buildResponsePayload(rule.responseType, rule.responsePayload);
       await sendMessage(channel, senderId, message);
+      await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
       return;
     }
@@ -184,19 +263,26 @@ async function processIncomingMessage(normalizedMessage) {
           ? (kw.responsePayload.text != null ? { text: kw.responsePayload.text } : kw.responsePayload)
           : { text: '' });
       await sendMessage(channel, senderId, message);
+      await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
       return;
     }
   }
 
-  // 3) AI
+  // 3) AI – lidhja e pipeline me rrjedhën companyInfo (hapi 5); historiku (hapi 6) në recentMessages
+  const companyInfoText = await getCompanyInfoForChannel(channel);
   const conversationContext = {
     channelId,
     platformUserId: String(senderId),
-    recentMessages: [], // mund të mbushësh nga Message.find për kontekst më të pas
+    recentMessages: recentMessagesList,
   };
-  const aiReply = await getReply(pipelineCtx.messageText, conversationContext);
+  const aiReply = await getReply(
+    pipelineCtx.messageText,
+    conversationContext,
+    companyInfoText
+  );
   await sendMessage(channel, senderId, { text: aiReply });
+  await saveMessage(conversation._id, 'out', { text: aiReply });
   await upsertConversationLastMessage(channelId, senderId);
 }
 

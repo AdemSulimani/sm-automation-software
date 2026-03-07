@@ -17,15 +17,16 @@ function getGroqChatUrl() {
  *
  * @param {string} messageText - Teksti i mesazhit hyrës
  * @param {object} [conversationContext] - Kontekst opsional (historik mesazhesh, metadata)
+ * @param {string} [companyInfo] - Informacione/udhëzime për kompaninë (nga Channel.aiInstructions ose User.companyInfo)
  * @returns {Promise<string>} Teksti i përgjigjes
  */
-async function getReply(messageText, conversationContext = {}) {
+async function getReply(messageText, conversationContext = {}, companyInfo = '') {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
     return getFallbackReply();
   }
   try {
-    return await getGroqReply(apiKey, messageText, conversationContext);
+    return await getGroqReply(apiKey, messageText, conversationContext, companyInfo);
   } catch (err) {
     console.error('AI service Groq error:', err.message);
     return getFallbackReply();
@@ -33,10 +34,29 @@ async function getReply(messageText, conversationContext = {}) {
 }
 
 /**
- * Thirr Groq Chat Completions API (Llama).
+ * Ndërton system message për Groq: roli i asistentit + të dhënat/udhëzimet e kompanisë.
+ * Ky mesazh udhëzon modelin para se të marrë mesazhet e bisedës (user/assistant).
  */
-async function getGroqReply(apiKey, messageText, conversationContext) {
+function buildSystemMessage(companyInfoText) {
+  return `Ti je asistenti i kësaj kompanie. Këto janë të dhënat dhe udhëzimet:\n\n${companyInfoText}\n\nPërgjigju vetëm bazuar në këto informacione dhe në tonin e specifikuar. Mos shpik informacion që nuk është këtu.`;
+}
+
+/**
+ * Thirr Groq Chat Completions API (Llama).
+ * Radha e mesazheve: [system me companyInfo], [recentMessages], [mesazhi i ri i përdoruesit].
+ */
+async function getGroqReply(apiKey, messageText, conversationContext, companyInfo = '') {
   const messages = [];
+  const infoText =
+    typeof companyInfo === 'string' && companyInfo.trim()
+      ? companyInfo.trim()
+      : '';
+  if (infoText) {
+    messages.push({
+      role: 'system',
+      content: buildSystemMessage(infoText),
+    });
+  }
   if (conversationContext.recentMessages && Array.isArray(conversationContext.recentMessages)) {
     for (const m of conversationContext.recentMessages.slice(-10)) {
       messages.push({

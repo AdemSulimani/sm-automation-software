@@ -55,4 +55,42 @@ const login = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login };
+/**
+ * Kthen profilin e përdoruesit të loguar (pa fjalëkalim); përfshin companyInfo.
+ */
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Përdoruesi nuk u gjet.' });
+    }
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Përditëson profilin e përdoruesit të loguar (emër, companyInfo).
+ */
+const updateMe = async (req, res, next) => {
+  try {
+    const allowed = ['name', 'companyInfo'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    const user = await User.findByIdAndUpdate(req.userId, updates, {
+      new: true,
+      runValidators: true,
+    }).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Përdoruesi nuk u gjet.' });
+    }
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, getMe, updateMe };

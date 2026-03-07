@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+    // Informacione për AI: përshkrimi i kompanisë, produkte, çmime, FAQ, etj. (default për të gjitha kanalet)
+    companyInfo: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );
