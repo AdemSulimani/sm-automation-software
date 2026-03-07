@@ -5,14 +5,25 @@
 
 const Channel = require('../models/Channel');
 
+/** Admin mund të aksesojë çdo channel; klienti vetëm channelet e veta. */
+const ensureUserCanAccessChannel = async (req, channelId) => {
+  const channel = await Channel.findOne({ _id: channelId });
+  if (!channel) return null;
+  if (req.user.role === 'admin') return channel;
+  return channel.userId && channel.userId.toString() === req.userId.toString() ? channel : null;
+};
+
 /**
- * Listo të gjithë channelet e përdoruesit.
+ * Listo channelet. Klienti: vetëm të vetat; admin: mund të filtrojë me userId (channelet e atij klienti).
  */
 const list = async (req, res, next) => {
   try {
-    const channels = await Channel.find({ userId: req.userId })
+    const { userId } = req.query;
+    const filterUserId =
+      req.user.role === 'admin' && userId ? userId : req.userId.toString();
+    const channels = await Channel.find({ userId: filterUserId })
       .sort({ createdAt: -1 })
-      .select('-accessToken'); // Mos kthe token në listë
+      .select('-accessToken');
     res.json({ success: true, data: channels });
   } catch (err) {
     next(err);
@@ -20,18 +31,14 @@ const list = async (req, res, next) => {
 };
 
 /**
- * Merr një channel sipas id; vetëm nëse i përket përdoruesit.
+ * Merr një channel sipas id; përdoruesi vetëm nëse i përket, admin për çdo channel.
  */
 const getOne = async (req, res, next) => {
   try {
-    const channel = await Channel.findOne({
-      _id: req.params.id,
-      userId: req.userId,
-    });
+    const channel = await ensureUserCanAccessChannel(req, req.params.id);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet.' });
     }
-    // Opsional: mund të mos ekspozosh accessToken në GET (ose vetëm ****)
     const payload = channel.toObject();
     if (payload.accessToken) payload.accessToken = '***';
     res.json({ success: true, data: payload });
@@ -84,19 +91,22 @@ const ALLOWED_CHANNEL_UPDATE_FIELDS = [
 ];
 
 /**
- * Përditëson një channel; vetëm nëse i përket përdoruesit. Përditëson vetëm fushat e lejuara.
+ * Përditëson një channel; përdoruesi vetëm nëse i përket, admin për çdo channel.
  */
 const update = async (req, res, next) => {
   try {
+    const canAccess = await ensureUserCanAccessChannel(req, req.params.id);
+    if (!canAccess) {
+      return res.status(404).json({ success: false, message: 'Kanali nuk u gjet.' });
+    }
     const updates = {};
     for (const key of ALLOWED_CHANNEL_UPDATE_FIELDS) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
-    const channel = await Channel.findOneAndUpdate(
-      { _id: req.params.id, userId: req.userId },
-      updates,
-      { new: true, runValidators: true }
-    );
+    const channel = await Channel.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+      runValidators: true,
+    });
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet.' });
     }
@@ -109,17 +119,15 @@ const update = async (req, res, next) => {
 };
 
 /**
- * Fshin një channel; vetëm nëse i përket përdoruesit.
+ * Fshin një channel; përdoruesi vetëm nëse i përket, admin për çdo channel.
  */
 const remove = async (req, res, next) => {
   try {
-    const channel = await Channel.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.userId,
-    });
-    if (!channel) {
+    const canAccess = await ensureUserCanAccessChannel(req, req.params.id);
+    if (!canAccess) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet.' });
     }
+    await Channel.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Kanali u fshi.' });
   } catch (err) {
     next(err);
