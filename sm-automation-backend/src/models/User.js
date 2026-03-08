@@ -38,6 +38,12 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'client'],
       default: 'client',
     },
+    businessId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Business',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );

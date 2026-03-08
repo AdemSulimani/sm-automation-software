@@ -8,12 +8,20 @@ const AutomationRule = require('./AutomationRule');
 const KeywordResponse = require('./KeywordResponse');
 const Conversation = require('./Conversation');
 const Message = require('./Message');
+const OAuthMetaSession = require('./OAuthMetaSession');
+const Contact = require('./Contact');
+const ContactIdentity = require('./ContactIdentity');
+const Business = require('./Business');
 
 module.exports = {
   User,
+  Business,
   Channel,
   AutomationRule,
   KeywordResponse,
   Conversation,
   Message,
+  OAuthMetaSession,
+  Contact,
+  ContactIdentity,
 };

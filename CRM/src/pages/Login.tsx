@@ -6,6 +6,7 @@ import { getStoredUser } from '../services/api';
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -52,12 +53,21 @@ export function Login() {
           <label>
             Fjalëkalim
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
             />
+            <label className="auth-show-password">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                aria-label="Shfaq fjalëkalimin"
+              />
+              Shfaq fjalëkalimin
+            </label>
           </label>
           <button type="submit" disabled={loading}>
             {loading ? 'Duke hyrë…' : 'Hyr'}

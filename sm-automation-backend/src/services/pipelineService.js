@@ -14,6 +14,7 @@ const {
 } = require('../models');
 const { sendMessage } = require('./outboundService');
 const { getReply } = require('./aiService');
+const { getOrCreateContactForChannelUser } = require('./contactService');
 
 /** Numri maksimal i mesazheve të fundit për kontekstin AI */
 const RECENT_MESSAGES_LIMIT = 10;
@@ -234,6 +235,16 @@ async function processIncomingMessage(normalizedMessage) {
 
   // Konversacioni dhe historiku për Message (hapi 6)
   const conversation = await getOrCreateConversation(channelId, senderId);
+  if (!conversation.contactId) {
+    const contactId = await getOrCreateContactForChannelUser(
+      channelId,
+      senderId,
+      channel.userId,
+      channel.businessId || null
+    );
+    await Conversation.findByIdAndUpdate(conversation._id, { $set: { contactId } });
+    conversation.contactId = contactId;
+  }
   const recentMessagesList = await getRecentMessagesForConversation(conversation._id);
   await saveMessage(conversation._id, 'in', messageText || '', mid);
   await upsertConversationLastMessage(channelId, senderId);

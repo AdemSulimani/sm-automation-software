@@ -74,7 +74,7 @@ export function Privacy() {
           <ul>
             <li>Të dhënat përpunohen dhe ruhen në <strong>serveret</strong> ku hostohet aplikacioni. Mund të përdorni providerë hosting në EU, US ose zona të tjera – rekomandohet të përmendni vendin aktual nëse e dini.</li>
             <li>Përdorim një <strong>bazë të dhënash (MongoDB)</strong> për të ruajtur përdoruesit, kanalet, bisedat dhe mesazhet.</li>
-            <li><strong>Siguria:</strong> komunikimi mes shfletuesit tuaj dhe serverit është i mbrojtur (enkriptim në tranzit, p.sh. HTTPS). Fjalëkalimet ruhen vetëm të hash-uar (me algoritme të fuqishme) dhe nuk mund të rikthehen në formë të lexueshme. Tokenat e aksesit dhe të dhënat e ndjeshme ruhen në mënyrë të kontrolluar në server.</li>
+            <li><strong>Siguria:</strong> komunikimi mes shfletuesit tuaj dhe serverit është i mbrojtur (enkriptim në tranzit, p.sh. HTTPS). Fjalëkalimet ruhen vetëm të hash-uar (me algoritme të fuqishme) dhe nuk mund të rikthehen në formë të lexueshme. Tokenat e aksesit (Meta/Viber) mund të ruhen të enkriptuar në pushim (AES-256) kur ky mënyrë është aktivizuar në server; të dhënat e tjera të ndjeshme ruhen në mënyrë të kontrolluar.</li>
             <li>Për shërbime të jashtme (hosting, bazë të dhënash, AI) përpiqemi të përdorim providerë të besueshëm me praktika të mira sigurie.</li>
           </ul>
         </section>
@@ -115,7 +115,7 @@ export function Privacy() {
             <li><strong>Ankim</strong> – të ankoheni te autoriteti i mbrojtjes së të dhënave të kompetent (p.sh. në vendin tuaj).</li>
           </ul>
           <p>
-            Për të ushtruar këto të drejta, na kontaktoni në <a href="mailto:support@sm-automation.com">support@sm-automation.com</a>.
+            <strong>Si t’i ushtroni:</strong> ju mund të kërkojni <strong>eksportin e të dhënave tuaja</strong> (portabilitet) dhe <strong>fshirjen e llogarisë</strong> direkt nga aplikacioni (në Cilësime ose Profil), ose duke na kontaktuar në <a href="mailto:support@sm-automation.com">support@sm-automation.com</a>.
           </p>
         </section>
 

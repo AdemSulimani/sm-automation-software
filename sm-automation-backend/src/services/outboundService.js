@@ -1,8 +1,10 @@
 /**
  * Shërbimi outbound: dërgon mesazhe përmes Meta Graph API (Messenger, Instagram, WhatsApp)
  * dhe Viber REST API. Wrapper i vetëm sendMessage(channel, recipientId, message).
+ * Përdor getPlainAccessToken për të marrë tokenin e dekriptuar nëse është i ruajtur i enkriptuar.
  */
 
+const { getPlainAccessToken } = require('./tokenEncryption');
 const META_GRAPH_BASE = 'https://graph.facebook.com';
 const META_API_VERSION = 'v21.0';
 const VIBER_API_BASE = 'https://chatapi.viber.com/pa';
@@ -12,7 +14,8 @@ const VIBER_API_BASE = 'https://chatapi.viber.com/pa';
  * Përdor /me/messages me Page Access Token.
  */
 async function sendMetaMessengerOrInstagram(channel, recipientId, payload) {
-  const url = `${META_GRAPH_BASE}/${META_API_VERSION}/me/messages?access_token=${encodeURIComponent(channel.accessToken)}`;
+  const token = getPlainAccessToken(channel) || channel.accessToken;
+  const url = `${META_GRAPH_BASE}/${META_API_VERSION}/me/messages?access_token=${encodeURIComponent(token)}`;
   const body = {
     recipient: { id: recipientId },
     messaging_type: 'RESPONSE',
@@ -47,13 +50,14 @@ async function sendMetaWhatsApp(channel, recipientId, payload) {
   if (!pageId) {
     throw new Error('Channel missing platformPageId (phone_number_id) for WhatsApp');
   }
+  const token = getPlainAccessToken(channel) || channel.accessToken;
   const url = `${META_GRAPH_BASE}/${META_API_VERSION}/${pageId}/messages`;
   const body = buildWhatsAppBody(recipientId, payload);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${channel.accessToken}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
@@ -141,6 +145,7 @@ function buildWhatsAppBody(recipientId, payload) {
 async function sendViberMessage(channel, recipientId, payload) {
   const url = `${VIBER_API_BASE}/send_message`;
   const senderName = (channel.name && channel.name.slice(0, 28)) || 'Bot';
+  const token = getPlainAccessToken(channel) || channel.accessToken;
   let type = 'text';
   let body = { text: '' };
 
@@ -168,7 +173,7 @@ async function sendViberMessage(channel, recipientId, payload) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Viber-Auth-Token': channel.accessToken,
+      'X-Viber-Auth-Token': token,
     },
     body: JSON.stringify(requestBody),
   });

@@ -37,6 +37,13 @@ const conversationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Kontakti i lidhur (një person mund të ketë konversacione në kanale të ndryshme)
+    contactId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Contact',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );
