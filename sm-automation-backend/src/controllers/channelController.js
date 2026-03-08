@@ -1,27 +1,44 @@
 /**
  * Kontrolleri për Channel (Integration) – CRUD i mbrojtur me JWT.
- * Të gjitha operacionet janë të fushëzuara nga userId (vetëm channelet e përdoruesit).
+ * Tokenat e aksesit enkriptohen në pushim nëse TOKEN_ENCRYPTION_KEY është vendosur.
  */
 
 const Channel = require('../models/Channel');
+const { encrypt } = require('../services/tokenEncryption');
 
-/** Admin mund të aksesojë çdo channel; klienti vetëm channelet e veta. */
+/** Admin mund të aksesojë çdo channel; klienti channelet e veta ose të biznesit të tij. */
 const ensureUserCanAccessChannel = async (req, channelId) => {
   const channel = await Channel.findOne({ _id: channelId });
   if (!channel) return null;
   if (req.user.role === 'admin') return channel;
-  return channel.userId && channel.userId.toString() === req.userId.toString() ? channel : null;
+  if (channel.userId && channel.userId.toString() === req.userId.toString()) return channel;
+  if (channel.businessId && req.user.businessId && channel.businessId.toString() === req.user.businessId.toString()) return channel;
+  return null;
 };
 
 /**
- * Listo channelet. Klienti: vetëm të vetat; admin: mund të filtrojë me userId (channelet e atij klienti).
+ * Listo channelet. Klienti: channelet e biznesit të tij (ose vetëm të vetat nëse nuk ka businessId); admin: filtron me userId.
  */
 const list = async (req, res, next) => {
   try {
     const { userId } = req.query;
-    const filterUserId =
-      req.user.role === 'admin' && userId ? userId : req.userId.toString();
-    const channels = await Channel.find({ userId: filterUserId })
+    let filter = {};
+    if (req.user.role === 'admin' && userId) {
+      const User = require('../models/User');
+      const targetUser = await User.findById(userId).select('businessId').lean();
+      if (targetUser && targetUser.businessId) {
+        filter = { businessId: targetUser.businessId };
+      } else {
+        filter = { userId };
+      }
+    } else if (req.user.role === 'admin') {
+      filter = {};
+    } else if (req.user.businessId) {
+      filter = { businessId: req.user.businessId };
+    } else {
+      filter = { userId: req.userId };
+    }
+    const channels = await Channel.find(filter)
       .sort({ createdAt: -1 })
       .select('-accessToken');
     res.json({ success: true, data: channels });
@@ -64,10 +81,11 @@ const create = async (req, res, next) => {
     } = req.body;
     const channel = await Channel.create({
       userId: req.userId,
+      businessId: req.user.businessId || null,
       platform,
       platformPageId: platformPageId ?? null,
       viberBotId: viberBotId ?? null,
-      accessToken,
+      accessToken: encrypt(accessToken),
       webhookVerifyToken: webhookVerifyToken ?? null,
       status: status || 'active',
       name: name ?? null,
@@ -101,7 +119,12 @@ const update = async (req, res, next) => {
     }
     const updates = {};
     for (const key of ALLOWED_CHANNEL_UPDATE_FIELDS) {
-      if (req.body[key] !== undefined) updates[key] = req.body[key];
+      if (req.body[key] === undefined) continue;
+      if (key === 'accessToken' && req.body[key] && req.body[key] !== '***') {
+        updates[key] = encrypt(req.body[key]);
+      } else {
+        updates[key] = req.body[key];
+      }
     }
     const channel = await Channel.findByIdAndUpdate(req.params.id, updates, {
       new: true,

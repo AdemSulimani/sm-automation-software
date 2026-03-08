@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../services/api';
-import type { Conversation } from '../types/inbox';
+import type { Conversation, ConversationContact } from '../types/inbox';
 import { CHANNEL_PLATFORM_LABELS } from '../types/channel';
 import type { ChannelPlatform } from '../types/channel';
 
@@ -20,6 +20,13 @@ function formatDate(dateStr: string | null) {
   const sameDay = d.toDateString() === now.toDateString();
   if (sameDay) return d.toLocaleTimeString('sq-AL', { hour: '2-digit', minute: '2-digit' });
   return d.toLocaleDateString('sq-AL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getDisplayUser(conv: Conversation): string {
+  const c = conv.contactId;
+  if (c && typeof c === 'object' && 'name' in c && (c as ConversationContact).name)
+    return (c as ConversationContact).name!;
+  return conv.platformUserId;
 }
 
 function getChannelLabel(conv: Conversation): string {
@@ -102,7 +109,7 @@ export function Inbox() {
           {conversations.map((conv) => (
             <li key={conv._id}>
               <Link to={`/app/inbox/${conv._id}`} className="conversation-row">
-                <span className="conv-user">{conv.platformUserId}</span>
+                <span className="conv-user">{getDisplayUser(conv)}</span>
                 <span className="conv-channel">{getChannelLabel(conv)}</span>
                 <span className="conv-date">{formatDate(conv.lastMessageAt)}</span>
               </Link>

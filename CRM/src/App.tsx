@@ -14,9 +14,14 @@ import {
   ChannelDetail,
   Inbox,
   InboxThread,
+  Contacts,
+  ContactDetail,
   Automation,
+  KeywordResponses,
   Settings,
-  Placeholder,
+  Profile,
+  Business,
+  Statistics,
 } from './pages';
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -52,16 +57,20 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="klientet" element={<AdminRoute><Klientet /></AdminRoute>} />
         <Route path="klientet/:userId/cilesime" element={<AdminRoute><ClientSettings /></AdminRoute>} />
-        <Route path="profile" element={<Placeholder />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="business" element={<Business />} />
+        <Route path="statistics" element={<Statistics />} />
         <Route path="channels" element={<Channels />} />
         <Route path="channels/:channelId" element={<ChannelDetail />} />
         <Route path="inbox" element={<Inbox />} />
         <Route path="inbox/:conversationId" element={<InboxThread />} />
+        <Route path="contacts" element={<Contacts />} />
+        <Route path="contacts/:contactId" element={<ContactDetail />} />
         <Route path="settings" element={<Settings />} />
         <Route path="automation" element={<Automation />} />
-        <Route path="keyword-responses" element={<Placeholder />} />
-        <Route path="chatbot" element={<Placeholder />} />
-        <Route path="manual-reply" element={<Placeholder />} />
+        <Route path="keyword-responses" element={<KeywordResponses />} />
+        <Route path="chatbot" element={<Navigate to="/app/channels" replace />} />
+        <Route path="manual-reply" element={<Navigate to="/app/inbox" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

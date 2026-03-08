@@ -17,6 +17,9 @@ const conversationRoutes = require('./routes/conversationRoutes');
 const automationRuleRoutes = require('./routes/automationRuleRoutes');
 const keywordResponseRoutes = require('./routes/keywordResponseRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const oauthMetaRoutes = require('./routes/oauthMetaRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+const businessRoutes = require('./routes/businessRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +40,9 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/automation-rules', automationRuleRoutes);
 app.use('/api/keyword-responses', keywordResponseRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/oauth/meta', oauthMetaRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/business', businessRoutes);
 
 // Rrugë test
 app.get('/api/health', (req, res) => {

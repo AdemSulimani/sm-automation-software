@@ -31,6 +31,7 @@ interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (partial: Partial<StoredUser>) => void;
   isAdmin: boolean;
 }
 
@@ -70,15 +71,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, loading: false });
   }, []);
 
+  const updateUser = useCallback((partial: Partial<StoredUser>) => {
+    setState((s) => {
+      if (!s.user) return s;
+      const nextUser = { ...s.user, ...partial };
+      const token = getStoredToken();
+      if (token) setStoredAuth(token, nextUser);
+      return { ...s, user: nextUser };
+    });
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
       login,
       register,
       logout,
+      updateUser,
       isAdmin: state.user?.role === 'admin',
     }),
-    [state, login, register, logout]
+    [state, login, register, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

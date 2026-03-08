@@ -1,14 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { apiRequest } from '../services/api';
+import { Link, useSearchParams } from 'react-router-dom';
+import { apiRequest, getStoredToken } from '../services/api';
+import { env } from '../config/env';
 import type { Channel, ChannelPlatform, ChannelStatus } from '../types/channel';
 import { CHANNEL_PLATFORM_LABELS, CHANNEL_STATUS_LABELS } from '../types/channel';
 
+interface OAuthSelection {
+  pages: { id: string; name: string }[];
+  instagram: { id: string; username: string; pageId: string; pageName: string }[];
+}
+
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  missing_token: 'Mungon tokeni. Hyni përsëri në llogari.',
+  invalid_token: 'Sesioni ka skaduar. Hyni përsëri në llogari.',
+  session_expired_or_invalid: 'Sesioni OAuth ka skaduar. Provoni përsëri.',
+  missing_code_or_state: 'Meta nuk dërgoi të dhënat e duhura. Provoni përsëri.',
+  oauth_failed: 'Lidhja me Meta dështoi. Provoni përsëri.',
+};
+
 export function Channels() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const oauthKey = searchParams.get('oauth') === 'meta' ? searchParams.get('key') : null;
+  const oauthError = searchParams.get('oauth_error');
 
   function loadChannels() {
     setLoading(true);
@@ -23,11 +40,28 @@ export function Channels() {
     loadChannels();
   }, []);
 
+  function clearOAuthParams() {
+    setSearchParams((prev) => {
+      prev.delete('oauth');
+      prev.delete('key');
+      prev.delete('oauth_error');
+      return prev;
+    }, { replace: true });
+  }
+
   if (loading) return <div className="page-loading">Duke ngarkuar kanalet…</div>;
   if (error) return <div className="page-error" role="alert">{error}</div>;
 
   return (
     <div className="page-channels">
+      {oauthError && (
+        <div className="auth-error oauth-error-banner" role="alert">
+          {OAUTH_ERROR_MESSAGES[oauthError] || oauthError}
+          <button type="button" className="oauth-error-dismiss" onClick={clearOAuthParams}>
+            Mbyll
+          </button>
+        </div>
+      )}
       <div className="page-channels-header">
         <h1>Kanale</h1>
         <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
@@ -97,6 +131,121 @@ export function Channels() {
           }}
         />
       )}
+      {oauthKey && (
+        <OAuthSelectModal
+          oauthKey={oauthKey}
+          onClose={clearOAuthParams}
+          onConnected={() => {
+            clearOAuthParams();
+            loadChannels();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function OAuthSelectModal({
+  oauthKey,
+  onClose,
+  onConnected,
+}: {
+  oauthKey: string;
+  onClose: () => void;
+  onConnected: () => void;
+}) {
+  const [data, setData] = useState<OAuthSelection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [connecting, setConnecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiRequest<OAuthSelection>(`/api/oauth/meta/selection?key=${encodeURIComponent(oauthKey)}`)
+      .then((res) => setData(res))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gabim në ngarkim.'))
+      .finally(() => setLoading(false));
+  }, [oauthKey]);
+
+  function handleConnect(platform: 'facebook' | 'instagram', platformPageId: string, name: string) {
+    setConnecting(platformPageId);
+    setError('');
+    apiRequest<Channel>('/api/oauth/meta/connect', {
+      method: 'POST',
+      body: JSON.stringify({ oauthKey, platform, platformPageId, name: name || undefined }),
+    })
+      .then(() => onConnected())
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gabim gjatë lidhjes.'))
+      .finally(() => setConnecting(null));
+  }
+
+  const hasItems = data && (data.pages.length > 0 || data.instagram.length > 0);
+
+  return (
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Lidhni një faqe ose llogari Instagram</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Mbyll">
+            ×
+          </button>
+        </div>
+        <div className="modal-form">
+          {error && <div className="auth-error">{error}</div>}
+          {loading && <p className="page-loading">Duke ngarkuar…</p>}
+          {!loading && !hasItems && (
+            <p>Nuk u gjetën faqe Facebook ose llogari Instagram. Sigurohuni që keni lidhur një faqe me Instagram Business.</p>
+          )}
+          {!loading && hasItems && (
+            <>
+              {data!.pages.length > 0 && (
+                <div className="oauth-select-group">
+                  <h3>Faqe Facebook (Messenger)</h3>
+                  <ul className="oauth-select-list">
+                    {data!.pages.map((p) => (
+                      <li key={p.id} className="oauth-select-item">
+                        <span>{p.name}</span>
+                        <button
+                          type="button"
+                          className="btn-primary btn-sm"
+                          disabled={!!connecting}
+                          onClick={() => handleConnect('facebook', p.id, p.name)}
+                        >
+                          {connecting === p.id ? 'Duke lidhur…' : 'Lidh'}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {data!.instagram.length > 0 && (
+                <div className="oauth-select-group">
+                  <h3>Instagram</h3>
+                  <ul className="oauth-select-list">
+                    {data!.instagram.map((ig) => (
+                      <li key={ig.id} className="oauth-select-item">
+                        <span>@{ig.username} ({ig.pageName})</span>
+                        <button
+                          type="button"
+                          className="btn-primary btn-sm"
+                          disabled={!!connecting}
+                          onClick={() => handleConnect('instagram', ig.id, ig.username)}
+                        >
+                          {connecting === ig.id ? 'Duke lidhur…' : 'Lidh'}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+          <div className="modal-actions" style={{ marginTop: '1rem' }}>
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Mbyll
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -116,6 +265,14 @@ function AddChannelModal({ onClose, onSuccess }: AddChannelModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const isViber = platform === 'viber';
+
+  function startMetaOAuth() {
+    const token = getStoredToken();
+    if (!token) {
+      return;
+    }
+    window.location.href = `${env.apiUrl}/api/oauth/meta/start?token=${encodeURIComponent(token)}`;
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -157,6 +314,13 @@ function AddChannelModal({ onClose, onSuccess }: AddChannelModalProps) {
         </div>
         <form onSubmit={handleSubmit} className="modal-form">
           {error && <div className="auth-error">{error}</div>}
+          <div className="oauth-connect-block">
+            <p className="oauth-connect-hint">Lidhni pa kopjim tokenash (vetëm Facebook dhe Instagram):</p>
+            <button type="button" className="btn-primary oauth-connect-btn" onClick={startMetaOAuth}>
+              Lidh me Facebook / Instagram
+            </button>
+          </div>
+          <p className="modal-form-divider">— ose shto me token manual —</p>
           <label>
             Platformë
             <select

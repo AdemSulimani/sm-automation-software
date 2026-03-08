@@ -10,6 +10,7 @@ export function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -59,13 +60,22 @@ export function Register() {
           <label>
             Fjalëkalim
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
               autoComplete="new-password"
             />
+            <label className="auth-show-password">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                aria-label="Shfaq fjalëkalimin"
+              />
+              Shfaq fjalëkalimin
+            </label>
           </label>
           <button type="submit" disabled={loading}>
             {loading ? 'Duke u regjistruar…' : 'Regjistrohu'}

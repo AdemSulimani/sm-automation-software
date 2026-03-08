@@ -1,7 +1,7 @@
 /**
  * Përcaktimi i faqesh dhe menysë sipas role (admin / client).
- * Admin: Paneli, Klientët, Inbox, Kanale, Automation, Settings, Chatbot ON/OFF, Përgjigje manuale.
- * Client: Paneli, Profili im, Kanale, Inbox, Automation, Settings, Chatbot ON/OFF (asnjë link "Klientët").
+ * Chatbot ON/OFF ridrejton te Kanale; Përgjigje manuale ridrejton te Inbox.
+ * Profili im është faqja e vërtetë e profilit (emër, email, fjalëkalim).
  */
 
 export type UserRole = 'admin' | 'client';
@@ -18,10 +18,14 @@ export const navItems: NavItem[] = [
   // Të dyja rolet
   { path: '/app', label: 'Paneli', role: 'client' },
   { path: '/app/profile', label: 'Profili im', role: 'client' },
+  { path: '/app/business', label: 'Biznesi im', role: 'client' },
   { path: '/app/channels', label: 'Kanale', role: 'client' },
   { path: '/app/inbox', label: 'Inbox', role: 'client' },
+  { path: '/app/contacts', label: 'Kontaktet', role: 'client' },
   { path: '/app/automation', label: 'Automatikë', role: 'client' },
+  { path: '/app/keyword-responses', label: 'Përgjigje me fjalë kyçe', role: 'client' },
   { path: '/app/settings', label: 'Cilësime', role: 'client' },
+  { path: '/app/statistics', label: 'Statistika', role: 'client' },
   { path: '/app/chatbot', label: 'Chatbot ON/OFF', role: 'client' },
   // Vetëm admin
   { path: '/app/klientet', label: 'Klientët', role: 'admin' },

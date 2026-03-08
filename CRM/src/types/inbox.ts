@@ -8,6 +8,13 @@ export interface ConversationChannel {
   platform: string;
 }
 
+export interface ConversationContact {
+  _id: string;
+  name: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export interface Conversation {
   _id: string;
   channelId: string | ConversationChannel;
@@ -15,6 +22,7 @@ export interface Conversation {
   platformConversationId: string | null;
   lastMessageAt: string | null;
   metadata: Record<string, unknown>;
+  contactId?: string | ConversationContact | null;
   createdAt: string;
   updatedAt: string;
 }

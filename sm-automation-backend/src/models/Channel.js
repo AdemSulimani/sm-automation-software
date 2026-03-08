@@ -13,6 +13,12 @@ const channelSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    businessId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Business',
+      default: null,
+      index: true,
+    },
     platform: {
       type: String,
       required: true,

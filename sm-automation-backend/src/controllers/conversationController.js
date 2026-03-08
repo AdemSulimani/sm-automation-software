@@ -10,13 +10,15 @@ const { sendMessage } = require('../services/outboundService');
 
 /**
  * Përcakton nëse përdoruesi ka të drejtë të aksesojë një channel.
- * Admin mund të aksesojë çdo channel; klienti vetëm channelet e veta.
+ * Admin mund të aksesojë çdo channel; klienti channelet e veta ose të biznesit.
  */
 async function canAccessChannel(channelId, req) {
   const channel = await Channel.findById(channelId).lean();
   if (!channel) return false;
   if (req.user.role === 'admin') return true;
-  return channel.userId && channel.userId.toString() === req.userId.toString();
+  if (channel.userId && channel.userId.toString() === req.userId.toString()) return true;
+  if (channel.businessId && req.user.businessId && channel.businessId.toString() === req.user.businessId.toString()) return true;
+  return false;
 }
 
 /**
@@ -28,10 +30,16 @@ const listConversations = async (req, res, next) => {
     let channelIds;
 
     if (req.user.role === 'admin' && userId) {
-      const channels = await Channel.find({ userId }).select('_id').lean();
+      const User = require('../models/User');
+      const targetUser = await User.findById(userId).select('businessId').lean();
+      const adminFilter = targetUser && targetUser.businessId ? { businessId: targetUser.businessId } : { userId };
+      const channels = await Channel.find(adminFilter).select('_id').lean();
       channelIds = channels.map((c) => c._id);
     } else if (req.user.role === 'admin') {
       const channels = await Channel.find({}).select('_id').lean();
+      channelIds = channels.map((c) => c._id);
+    } else if (req.user.businessId) {
+      const channels = await Channel.find({ businessId: req.user.businessId }).select('_id').lean();
       channelIds = channels.map((c) => c._id);
     } else {
       const channels = await Channel.find({ userId: req.userId }).select('_id').lean();
@@ -53,6 +61,7 @@ const listConversations = async (req, res, next) => {
 
     const conversations = await Conversation.find(filter)
       .populate('channelId', 'name platform')
+      .populate('contactId', 'name email phone')
       .sort({ lastMessageAt: -1, createdAt: -1 })
       .lean();
 
