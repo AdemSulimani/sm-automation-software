@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../services/api';
 import type { Channel } from '../types/channel';
-import type { AutomationRule as Rule, AutomationTrigger } from '../types/automation';
-import { TRIGGER_LABELS } from '../types/automation';
+import type { AutomationRule as Rule, AutomationTrigger, AutomationTriggerSource } from '../types/automation';
+import { TRIGGER_LABELS, TRIGGER_SOURCE_LABELS } from '../types/automation';
 import { CHANNEL_PLATFORM_LABELS } from '../types/channel';
 import type { ChannelPlatform } from '../types/channel';
 
@@ -158,6 +158,7 @@ export function Automation() {
           <thead>
             <tr>
               <th>Trigger</th>
+              <th>Burim eventi</th>
               <th>Vlerë / Regex</th>
               <th>Përgjigja</th>
               <th>Prioritet</th>
@@ -169,6 +170,7 @@ export function Automation() {
             {rules.map((rule) => (
               <tr key={rule._id}>
                 <td>{TRIGGER_LABELS[rule.trigger]}</td>
+                <td>{TRIGGER_SOURCE_LABELS[rule.triggerSource ?? 'any']}</td>
                 <td className="td-value">{getTriggerValueDisplay(rule)}</td>
                 <td className="td-response">{getResponsePreview(rule)}</td>
                 <td>{rule.priority}</td>
@@ -232,6 +234,9 @@ function RuleFormModal({ channelId, channels, editingRule, onClose, onSuccess }:
   );
   const [priority, setPriority] = useState(editingRule?.priority?.toString() ?? '0');
   const [active, setActive] = useState(editingRule?.active !== false);
+  const [triggerSource, setTriggerSource] = useState<AutomationTriggerSource>(
+    editingRule?.triggerSource ?? 'any'
+  );
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -257,6 +262,7 @@ function RuleFormModal({ channelId, channels, editingRule, onClose, onSuccess }:
       active,
       triggerValue: trigger === 'after_X_min' ? parseInt(triggerValue, 10) || null : null,
       triggerRegex: trigger === 'keyword_regex' ? triggerRegex.trim() || null : null,
+      triggerSource,
     };
     try {
       if (editingRule) {
@@ -309,6 +315,18 @@ function RuleFormModal({ channelId, channels, editingRule, onClose, onSuccess }:
               <option value="first_message">Mesazhi i parë</option>
               <option value="after_X_min">Pas X minutash</option>
               <option value="keyword_regex">Fjalë kyçe / regex</option>
+            </select>
+          </label>
+          <label>
+            Nga cilat evente ndizet
+            <select
+              value={triggerSource}
+              onChange={(e) => setTriggerSource(e.target.value as AutomationTriggerSource)}
+            >
+              <option value="any">{TRIGGER_SOURCE_LABELS.any}</option>
+              <option value="dm">{TRIGGER_SOURCE_LABELS.dm}</option>
+              <option value="comment">{TRIGGER_SOURCE_LABELS.comment}</option>
+              <option value="button">{TRIGGER_SOURCE_LABELS.button}</option>
             </select>
           </label>
           {trigger === 'after_X_min' && (

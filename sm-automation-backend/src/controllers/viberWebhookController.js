@@ -22,7 +22,7 @@ async function findViberChannel(body) {
  * Normalizon një mesazh nga payload-i Viber në format të brendshëm.
  * @param {object} channel - Dokumenti Channel (Mongoose)
  * @param {object} body - Body e webhook-it Viber (sender, message, message_token)
- * @returns { { channelId, senderId, messageText, platform, mid } | null }
+ * @returns { { channelId, senderId, messageText, platform, mid, triggerType } | null }
  */
 function normalizeViberMessage(channel, body) {
   const sender = body.sender;
@@ -43,6 +43,7 @@ function normalizeViberMessage(channel, body) {
     messageText,
     platform: 'viber',
     mid: body.message_token,
+    triggerType: 'dm',
   };
 }
 

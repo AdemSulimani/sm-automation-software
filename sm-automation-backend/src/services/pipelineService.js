@@ -12,9 +12,10 @@ const {
   User,
   Message,
 } = require('../models');
-const { sendMessage } = require('./outboundService');
+const { enqueueOutboundMessage } = require('./outboundQueueService');
 const { getReply } = require('./aiService');
 const { getOrCreateContactForChannelUser } = require('./contactService');
+const { canSendMessageWithin24h } = require('./messageWindowService');
 
 /** Numri maksimal i mesazheve të fundit për kontekstin AI */
 const RECENT_MESSAGES_LIMIT = 10;
@@ -91,18 +92,24 @@ async function getRecentMessagesForConversation(conversationId, limit = RECENT_M
 }
 
 /**
- * Kontrollon nëse një rregull automation përputhet me kontekstin dhe mesazhin.
+ * Kontrollon nëse një rregull automation përputhet me kontekstin, mesazhin dhe llojin e trigger-it.
  *
  * @param {object} rule - Dokumenti AutomationRule
- * @param {object} ctx - { isFirstMessage, lastMessageAt, messageText }
+ * @param {object} ctx - { isFirstMessage, lastMessageAt, messageText, triggerType }
  * @returns {boolean}
  */
 function automationRuleMatches(rule, ctx) {
-  const { trigger, triggerValue, triggerRegex, active } = rule;
+  const { trigger, triggerValue, triggerRegex, triggerSource, active } = rule;
   if (!active) return false;
 
-  const { isFirstMessage, lastMessageAt, messageText } = ctx;
+  const { isFirstMessage, lastMessageAt, messageText, triggerType } = ctx;
   const now = Date.now();
+
+  const source = triggerSource || 'any';
+  const incomingType = triggerType || 'dm';
+  if (source !== 'any' && source !== incomingType) {
+    return false;
+  }
 
   switch (trigger) {
     case 'first_message':
@@ -201,12 +208,23 @@ async function getCompanyInfoForChannel(channel) {
 
 /**
  * Përditëson (ose krijon) konversacionin pas përpunimit të mesazhit.
+ * Nëse është mesazh INBOUND nga përdoruesi, përditëson edhe lastUserMessageAt.
+ *
+ * @param {object} channelId
+ * @param {string|number} senderId
+ * @param {{ isInbound?: boolean }} [options]
  */
-async function upsertConversationLastMessage(channelId, senderId) {
+async function upsertConversationLastMessage(channelId, senderId, options = {}) {
   const platformUserId = String(senderId);
+  const isInbound = !!options.isInbound;
+  const now = new Date();
+  const setFields = { lastMessageAt: now };
+  if (isInbound) {
+    setFields.lastUserMessageAt = now;
+  }
   await Conversation.findOneAndUpdate(
     { channelId, platformUserId },
-    { $set: { lastMessageAt: new Date() } },
+    { $set: setFields },
     { upsert: true, new: true }
   ).exec();
 }
@@ -214,10 +232,10 @@ async function upsertConversationLastMessage(channelId, senderId) {
 /**
  * Pipeline i brendshëm: automation → keyword → AI. Të gjitha përgjigjet dërgohen përmes outbound.
  *
- * @param {object} normalizedMessage - { channelId, senderId, messageText, platform?, mid? }
+ * @param {object} normalizedMessage - { channelId, senderId, messageText, platform?, mid?, triggerType?, triggerMetadata? }
  */
 async function processIncomingMessage(normalizedMessage) {
-  const { channelId, senderId, messageText, mid } = normalizedMessage;
+  const { channelId, senderId, messageText, mid, triggerType } = normalizedMessage;
   if (!channelId || senderId == null) return;
 
   const channel = await Channel.findById(channelId).exec();
@@ -226,11 +244,20 @@ async function processIncomingMessage(normalizedMessage) {
     return;
   }
 
+  if (channel.tokenStatus && channel.tokenStatus !== 'valid') {
+    console.warn('Pipeline: channel token invalid/needs reconnect, skipping automation', {
+      channelId: String(channelId),
+      tokenStatus: channel.tokenStatus,
+    });
+    return;
+  }
+
   const convContext = await getConversationContext(channelId, senderId);
   const pipelineCtx = {
     isFirstMessage: convContext.isFirstMessage,
     lastMessageAt: convContext.lastMessageAt,
     messageText: messageText || '',
+    triggerType: triggerType || 'dm',
   };
 
   // Konversacioni dhe historiku për Message (hapi 6)
@@ -247,7 +274,7 @@ async function processIncomingMessage(normalizedMessage) {
   }
   const recentMessagesList = await getRecentMessagesForConversation(conversation._id);
   await saveMessage(conversation._id, 'in', messageText || '', mid);
-  await upsertConversationLastMessage(channelId, senderId);
+  await upsertConversationLastMessage(channelId, senderId, { isInbound: true });
 
   // Kur biznesi ka përgjigjur manual (botPaused), mos dërgo përgjigje automatike; çaktivizo pause që boti të përgjigjet te mesazhi i ardhshëm.
   if (conversation.botPaused) {
@@ -255,7 +282,7 @@ async function processIncomingMessage(normalizedMessage) {
     return;
   }
 
-  // Kur chatbot është OFF (status !== 'active'), mos dërgo përgjigje automatike – vetëm ruaj mesazhin (tashmë u ruajt) dhe përditëso konversacionin. Përgjigjet vetëm manual reply.
+  // Kur chatbot është OFF ose kanali është i kufizuar (status !== 'active'), mos dërgo përgjigje automatike.
   if (channel.status !== 'active') {
     return;
   }
@@ -272,8 +299,22 @@ async function processIncomingMessage(normalizedMessage) {
   for (const rule of automationRules) {
     if (automationRuleMatches(rule, pipelineCtx)) {
       const message = buildResponsePayload(rule.responseType, rule.responsePayload);
+      const windowCheck = canSendMessageWithin24h({ conversation, channel, direction: 'out' });
+      if (!windowCheck.allowed) {
+        console.warn('Automation reply blocked by 24h window', {
+          conversationId: String(conversation._id),
+          channelId: String(channel._id),
+          reason: windowCheck.reason,
+        });
+        return;
+      }
       await delayReply();
-      await sendMessage(channel, senderId, message);
+      await enqueueOutboundMessage({
+        channelId,
+        conversationId: conversation._id,
+        recipientId: String(senderId),
+        payload: message,
+      });
       await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
       return;
@@ -295,8 +336,22 @@ async function processIncomingMessage(normalizedMessage) {
         : (kw.responsePayload && typeof kw.responsePayload === 'object'
           ? (kw.responsePayload.text != null ? { text: kw.responsePayload.text } : kw.responsePayload)
           : { text: '' });
+      const windowCheck = canSendMessageWithin24h({ conversation, channel, direction: 'out' });
+      if (!windowCheck.allowed) {
+        console.warn('Keyword reply blocked by 24h window', {
+          conversationId: String(conversation._id),
+          channelId: String(channel._id),
+          reason: windowCheck.reason,
+        });
+        return;
+      }
       await delayReply();
-      await sendMessage(channel, senderId, message);
+      await enqueueOutboundMessage({
+        channelId,
+        conversationId: conversation._id,
+        recipientId: String(senderId),
+        payload: message,
+      });
       await saveMessage(conversation._id, 'out', message);
       await upsertConversationLastMessage(channelId, senderId);
       return;
@@ -315,8 +370,22 @@ async function processIncomingMessage(normalizedMessage) {
     conversationContext,
     companyInfoText
   );
+  const windowCheck = canSendMessageWithin24h({ conversation, channel, direction: 'out' });
+  if (!windowCheck.allowed) {
+    console.warn('AI reply blocked by 24h window', {
+      conversationId: String(conversation._id),
+      channelId: String(channel._id),
+      reason: windowCheck.reason,
+    });
+    return;
+  }
   await delayReply();
-  await sendMessage(channel, senderId, { text: aiReply });
+  await enqueueOutboundMessage({
+    channelId,
+    conversationId: conversation._id,
+    recipientId: String(senderId),
+    payload: { text: aiReply },
+  });
   await saveMessage(conversation._id, 'out', { text: aiReply });
   await upsertConversationLastMessage(channelId, senderId);
 }

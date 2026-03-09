@@ -47,6 +47,26 @@ export function Terms() {
         </section>
 
         <section className="legal-section">
+          <h2>3.1. Anti-spam dhe kufizimi i mesazheve</h2>
+          <p>
+            Për të mbrojtur reputacionin e aplikacionit dhe për të respektuar politikat e platformave (sidomos Meta),
+            ne monitorojmë vëllimin e mesazheve dhe gabimet që vijnë nga API-të e tyre (p.sh. njoftime për spam ose
+            bllokime). Nëse shohim sjellje të dyshimtë – si numër shumë i madh mesazhesh në kohë të shkurtër, përqindje
+            të lartë të gabimeve të tipit “spam/blocked” ose raportime nga platforma – ne mund të:
+          </p>
+          <ul>
+            <li>Kufizojmë përkohësisht dërgimin e mesazheve nga kanalet tuaja (p.sh. status “throttled” ose “suspended”).</li>
+            <li>Kufizojmë dërgimin e mesazheve në nivel biznesi (p.sh. <strong>messagingLimited</strong> për biznesin tuaj) derisa situata të qartësohet.</li>
+            <li>T’ju kontaktojmë për shpjegime dhe, në raste të rënda, të ndërpresim përfundimisht qasjen tuaj.</li>
+          </ul>
+          <p>
+            Duke përdorur SM Automation, ju pranoni që përdorimi i shërbimit për spam ose shkelje të politikave të
+            platformave na jep të drejtën të kufizojmë ose të mbyllim llogarinë tuaj dhe kanalet e lidhura, për të
+            mbrojtur përdoruesit e tjerë dhe integrimet tona me palë të treta.
+          </p>
+        </section>
+
+        <section className="legal-section">
           <h2>4. Ndërprerja ose mbyllja e shërbimit / llogarisë</h2>
           <p>
             <strong>Ne mund të ndërpresim ose të mbyllim</strong> qasjen tuaj ndaj shërbimit ose llogarinë tuaj, përkohësisht ose përfundimisht, nëse:

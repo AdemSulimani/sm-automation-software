@@ -1,3 +1,5 @@
+const Conversation = require('../models/Conversation');
+
 /**
  * Shërbimi outbound: dërgon mesazhe përmes Meta Graph API (Messenger, Instagram, WhatsApp)
  * dhe Viber REST API. Wrapper i vetëm sendMessage(channel, recipientId, message).
@@ -10,10 +12,29 @@ const META_API_VERSION = 'v21.0';
 const VIBER_API_BASE = 'https://chatapi.viber.com/pa';
 
 /**
+ * Kontrollon nëse një error nga Meta/WhatsApp është i tipit "outside allowed window" (24h).
+ *
+ * Meta Messenger/Instagram error example:
+ *  - code: 10, message përmban "cannot be sent outside the allowed window"
+ * WhatsApp Cloud API error example:
+ *  - code: 131051, ose mesazh i ngjashëm.
+ */
+function isOutsideWindowError(err) {
+  if (!err) return false;
+  const code = err.code;
+  const msg = typeof err.message === 'string' ? err.message.toLowerCase() : '';
+
+  if (code === 10 || code === 131051) return true;
+  if (msg && msg.includes('cannot be sent outside the allowed window')) return true;
+  if (msg && msg.includes('outside the 24 hour window')) return true;
+  return false;
+}
+
+/**
  * Dërgon mesazh përmes Meta Graph API për Facebook Messenger ose Instagram.
  * Përdor /me/messages me Page Access Token.
  */
-async function sendMetaMessengerOrInstagram(channel, recipientId, payload) {
+async function sendMetaMessengerOrInstagram(channel, recipientId, payload, conversationId = null) {
   const token = getPlainAccessToken(channel) || channel.accessToken;
   const url = `${META_GRAPH_BASE}/${META_API_VERSION}/me/messages?access_token=${encodeURIComponent(token)}`;
   const body = {
@@ -21,23 +42,46 @@ async function sendMetaMessengerOrInstagram(channel, recipientId, payload) {
     messaging_type: 'RESPONSE',
     message: buildMetaMessagePayload(payload),
   };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error?.message || `Meta API error: ${res.status}`);
-    err.code = data.error?.code;
+  let res;
+  let data;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    data = await res.json().catch(() => ({}));
+  } catch (err) {
+    throw err;
+  }
+
+  if (!res.ok || data.error) {
+    const metaErr = data && data.error ? data.error : {};
+    const err = new Error(metaErr.message || `Meta API error: ${res.status}`);
+    err.code = metaErr.code ?? res.status;
     err.status = res.status;
+
+    if (conversationId && isOutsideWindowError(err)) {
+      try {
+        await Conversation.findByIdAndUpdate(conversationId, {
+          $set: {
+            messagingWindowExpired: true,
+            lastWindowErrorAt: new Date(),
+          },
+        }).exec();
+      } catch (convErr) {
+        console.error('Failed to update conversation messagingWindowExpired for Meta', conversationId, convErr);
+      }
+      console.warn('Meta message blocked by platform 24h window', {
+        conversationId: String(conversationId),
+        code: err.code,
+        message: err.message,
+      });
+    }
+
     throw err;
   }
-  if (data.error) {
-    const err = new Error(data.error.message || 'Meta API returned error');
-    err.code = data.error.code;
-    throw err;
-  }
+
   return data;
 }
 
@@ -45,7 +89,7 @@ async function sendMetaMessengerOrInstagram(channel, recipientId, payload) {
  * Dërgon mesazh përmes WhatsApp Cloud API.
  * Endpoint: /{phone_number_id}/messages; "to" është numri i telefonit (recipientId).
  */
-async function sendMetaWhatsApp(channel, recipientId, payload) {
+async function sendMetaWhatsApp(channel, recipientId, payload, conversationId = null) {
   const pageId = channel.platformPageId;
   if (!pageId) {
     throw new Error('Channel missing platformPageId (phone_number_id) for WhatsApp');
@@ -53,26 +97,49 @@ async function sendMetaWhatsApp(channel, recipientId, payload) {
   const token = getPlainAccessToken(channel) || channel.accessToken;
   const url = `${META_GRAPH_BASE}/${META_API_VERSION}/${pageId}/messages`;
   const body = buildWhatsAppBody(recipientId, payload);
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error?.message || `WhatsApp API error: ${res.status}`);
-    err.code = data.error?.code;
+  let res;
+  let data;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    data = await res.json().catch(() => ({}));
+  } catch (err) {
+    throw err;
+  }
+
+  if (!res.ok || data.error) {
+    const metaErr = data && data.error ? data.error : {};
+    const err = new Error(metaErr.message || `WhatsApp API error: ${res.status}`);
+    err.code = metaErr.code ?? res.status;
     err.status = res.status;
+
+    if (conversationId && isOutsideWindowError(err)) {
+      try {
+        await Conversation.findByIdAndUpdate(conversationId, {
+          $set: {
+            messagingWindowExpired: true,
+            lastWindowErrorAt: new Date(),
+          },
+        }).exec();
+      } catch (convErr) {
+        console.error('Failed to update conversation messagingWindowExpired for WhatsApp', conversationId, convErr);
+      }
+      console.warn('WhatsApp message blocked by platform 24h window', {
+        conversationId: String(conversationId),
+        code: err.code,
+        message: err.message,
+      });
+    }
+
     throw err;
   }
-  if (data.error) {
-    const err = new Error(data.error.message || 'WhatsApp API returned error');
-    err.code = data.error.code;
-    throw err;
-  }
+
   return data;
 }
 
@@ -198,9 +265,10 @@ async function sendViberMessage(channel, recipientId, payload) {
  * @param {object} channel - Dokumenti Channel (ose objekt me platform, accessToken, platformPageId, viberBotId, name)
  * @param {string} recipientId - ID i marrësit (PSID për Messenger/IG, numër telefoni për WhatsApp, Viber user id për Viber)
  * @param {object} message - { text } | { attachment } | { template }
+ * @param {string|null} [conversationId] - Conversation._id (përdoret për shënimin e gabimeve 24h window)
  * @returns {Promise<object>} Përgjigja e API-së së platformës
  */
-async function sendMessage(channel, recipientId, message) {
+async function sendMessage(channel, recipientId, message, conversationId = null) {
   if (!channel || !channel.platform) {
     throw new Error('outboundService.sendMessage: channel and channel.platform required');
   }
@@ -213,11 +281,11 @@ async function sendMessage(channel, recipientId, message) {
 
   switch (platform) {
     case 'facebook':
-      return sendMetaMessengerOrInstagram(channel, recipientId, payload);
+      return sendMetaMessengerOrInstagram(channel, recipientId, payload, conversationId);
     case 'instagram':
-      return sendMetaMessengerOrInstagram(channel, recipientId, payload);
+      return sendMetaMessengerOrInstagram(channel, recipientId, payload, conversationId);
     case 'whatsapp':
-      return sendMetaWhatsApp(channel, recipientId, payload);
+      return sendMetaWhatsApp(channel, recipientId, payload, conversationId);
     case 'viber':
       return sendViberMessage(channel, recipientId, payload);
     default:

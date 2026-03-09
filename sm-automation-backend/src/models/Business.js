@@ -22,6 +22,16 @@ const businessSchema = new mongoose.Schema(
     // Orar pune për raportim (opsional). Format "HH:mm" (24h).
     workHoursStart: { type: String, trim: true, default: null },
     workHoursEnd: { type: String, trim: true, default: null },
+    // Nëse është true, kufizohen mesazhet outbound (p.sh. dyshim për spam).
+    messagingLimited: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    messagingLimitReason: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

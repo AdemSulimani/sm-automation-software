@@ -185,6 +185,7 @@ async function createChannelFromOAuth(req, res, next) {
         message: 'Ky kanal është i lidhur tashmë.',
       });
     }
+    const approximateExpiry = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // ~60 ditë për long-lived tokens
     const channel = await Channel.create({
       userId: req.userId,
       businessId: req.user.businessId || null,
@@ -194,6 +195,9 @@ async function createChannelFromOAuth(req, res, next) {
       accessToken: encrypt(accessToken),
       webhookVerifyToken: null,
       status: 'active',
+      tokenExpiresAt: approximateExpiry,
+      tokenLastRefreshedAt: new Date(),
+      tokenStatus: 'valid',
       name: name && String(name).trim() ? String(name).trim() : null,
       aiInstructions: '',
     });

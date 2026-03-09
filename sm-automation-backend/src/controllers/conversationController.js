@@ -6,7 +6,9 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Channel = require('../models/Channel');
-const { sendMessage } = require('../services/outboundService');
+const Business = require('../models/Business');
+const { enqueueOutboundMessage } = require('../services/outboundQueueService');
+const { canSendMessageWithin24h } = require('../services/messageWindowService');
 
 /**
  * Përcakton nëse përdoruesi ka të drejtë të aksesojë një channel.
@@ -137,12 +139,55 @@ const postMessage = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet.' });
     }
 
+    if (channel.status && channel.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        code: 'channel_limited',
+        message:
+          'Ky kanal është i kufizuar për dërgim mesazhesh për shkak të dyshimit për spam ose shkelje të politikave. Ju lutemi kontaktoni suportin.',
+      });
+    }
+
+    if (channel.businessId) {
+      const business = await Business.findById(channel.businessId).select('messagingLimited').lean();
+      if (business && business.messagingLimited) {
+        return res.status(400).json({
+          success: false,
+          code: 'business_limited',
+          message:
+            'Ky biznes është përkohësisht i kufizuar për dërgim mesazhesh për shkak të aktivitetit të dyshimtë. Ju lutemi kontaktoni suportin.',
+        });
+      }
+    }
+
+    if (channel.tokenStatus && channel.tokenStatus !== 'valid') {
+      return res.status(400).json({
+        success: false,
+        code: 'channel_needs_reconnect',
+        message: 'Tokeni për këtë kanal ka skaduar ose është i pavlefshëm. Ju lutemi rilidhni kanalin përmes Meta OAuth.',
+      });
+    }
+
     const messageText = typeof text === 'string' ? text.trim() : '';
     if (!messageText) {
       return res.status(400).json({ success: false, message: 'Teksti i mesazhit është i zbrazët.' });
     }
 
-    await sendMessage(channel, conversation.platformUserId, { text: messageText });
+    const windowCheck = canSendMessageWithin24h({ conversation, channel, direction: 'out' });
+    if (!windowCheck.allowed || conversation.messagingWindowExpired) {
+      return res.status(400).json({
+        success: false,
+        code: 'outside_24h_window',
+        message: 'Nuk mund të dërgosh mesazh sepse kanë kaluar 24 orë pa aktivitet nga klienti.',
+      });
+    }
+
+    await enqueueOutboundMessage({
+      channelId: conversation.channelId,
+      conversationId: conversation._id,
+      recipientId: conversation.platformUserId,
+      payload: { text: messageText },
+    });
 
     const newMessage = await Message.create({
       conversationId: conversation._id,
@@ -155,7 +200,11 @@ const postMessage = async (req, res, next) => {
     });
 
     const payload = newMessage.toObject ? newMessage.toObject() : newMessage;
-    res.status(201).json({ success: true, data: payload });
+    res.status(201).json({
+      success: true,
+      data: payload,
+      message: 'Mesazhi u pranuar dhe do të dërgohet përmes queue (mund të ketë vonesë nëse jemi afër limitit të Meta-s).',
+    });
   } catch (err) {
     next(err);
   }

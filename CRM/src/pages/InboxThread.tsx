@@ -87,6 +87,23 @@ export function InboxThread() {
 
   const { conversation, messages } = data;
 
+  const platform =
+    typeof conversation.channelId === 'object' && conversation.channelId !== null
+      ? (conversation.channelId as { platform?: string }).platform
+      : undefined;
+  const isMetaPlatform = platform === 'facebook' || platform === 'instagram' || platform === 'whatsapp';
+
+  let isOutside24hWindow = false;
+  if (isMetaPlatform && conversation.lastUserMessageAt) {
+    const lastUser = new Date(conversation.lastUserMessageAt);
+    const now = new Date();
+    const elapsedMs = now.getTime() - lastUser.getTime();
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    if (!Number.isNaN(elapsedMs) && elapsedMs > WINDOW_MS) {
+      isOutside24hWindow = true;
+    }
+  }
+
   return (
     <div className="page-inbox-thread">
       <div className="thread-header">
@@ -122,13 +139,18 @@ export function InboxThread() {
       <form onSubmit={handleSend} className="thread-reply">
         {error && <div className="auth-error">{error}</div>}
         {sendSuccess && <div className="form-success">Mesazhi u dërgua.</div>}
+        {isOutside24hWindow && (
+          <div className="auth-error">
+            Nuk mund të dërgoni mesazh sepse kanë kaluar 24 orë pa aktivitet nga klienti në këtë kanal.
+          </div>
+        )}
         <div className="thread-reply-row">
           <input
             type="text"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Shkruani mesazhin…"
-            disabled={sending}
+            disabled={sending || isOutside24hWindow}
           />
           <button type="submit" className="btn-primary" disabled={sending || !replyText.trim()}>
             {sending ? 'Duke dërguar…' : 'Dërgo'}

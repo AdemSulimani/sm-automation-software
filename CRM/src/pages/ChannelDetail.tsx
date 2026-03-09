@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { apiRequest } from '../services/api';
+import { apiRequest, getStoredToken } from '../services/api';
+import { env } from '../config/env';
 import type { Channel, ChannelPlatform, ChannelStatus } from '../types/channel';
 import { CHANNEL_PLATFORM_LABELS } from '../types/channel';
 
@@ -65,6 +66,16 @@ export function ChannelDetail() {
   if (error && !channel) return <div className="page-error" role="alert">{error}</div>;
   if (!channel) return null;
 
+  const needsReconnect = channel.tokenStatus === 'needs_reconnect' || channel.tokenStatus === 'invalid';
+
+  function startMetaOAuth() {
+    const token = getStoredToken();
+    if (!token) {
+      return;
+    }
+    window.location.href = `${env.apiUrl}/api/oauth/meta/start?token=${encodeURIComponent(token)}`;
+  }
+
   return (
     <div className="page-channel-detail">
       <div className="channel-detail-header">
@@ -84,6 +95,10 @@ export function ChannelDetail() {
             readOnly
             onClick={(e) => {
               e.preventDefault();
+              if (needsReconnect) {
+                setError('Ky kanal ka nevojë për rilidhje (token-i ka skaduar ose është i pavlefshëm). Rilidhni përmes Meta OAuth.');
+                return;
+              }
               const next = status === 'active' ? 'inactive' : 'active';
               setStatus(next);
               if (!channelId) return;
@@ -99,6 +114,17 @@ export function ChannelDetail() {
         </label>
         <span className="channel-chatbot-hint">{status === 'active' ? 'ON – përgjigje automatike' : 'OFF – vetëm përgjigje manuale'}</span>
       </div>
+      {needsReconnect && (
+        <div className="auth-error">
+          Tokeni i këtij kanali ka skaduar ose është bërë i pavlefshëm. Chatbot-i dhe dërgimi i mesazheve mund të mos funksionojnë
+          derisa të rilidhni kanalin.
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn-primary" onClick={startMetaOAuth}>
+              Rilidhu përmes Meta OAuth
+            </button>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="channel-detail-form">
         {error && <div className="auth-error">{error}</div>}
         {saveSuccess && <div className="form-success">U ruajt me sukses.</div>}

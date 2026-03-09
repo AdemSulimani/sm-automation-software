@@ -58,7 +58,17 @@ const getOne = async (req, res, next) => {
  */
 const create = async (req, res, next) => {
   try {
-    const { channelId, trigger, triggerValue, triggerRegex, responseType, responsePayload, priority, active } =
+    const {
+      channelId,
+      trigger,
+      triggerValue,
+      triggerRegex,
+      triggerSource,
+      responseType,
+      responsePayload,
+      priority,
+      active,
+    } =
       req.body;
     if (!channelId) {
       return res.status(400).json({ success: false, message: 'channelId është i detyrueshëm.' });
@@ -72,6 +82,7 @@ const create = async (req, res, next) => {
       trigger,
       triggerValue: triggerValue ?? null,
       triggerRegex: triggerRegex ?? null,
+      triggerSource: triggerSource || 'any',
       responseType,
       responsePayload,
       priority: priority ?? 0,
@@ -96,10 +107,12 @@ const update = async (req, res, next) => {
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Rregulli nuk ju përket.' });
     }
-    const { trigger, triggerValue, triggerRegex, responseType, responsePayload, priority, active } = req.body;
+    const { trigger, triggerValue, triggerRegex, triggerSource, responseType, responsePayload, priority, active } =
+      req.body;
     if (trigger !== undefined) rule.trigger = trigger;
     if (triggerValue !== undefined) rule.triggerValue = triggerValue;
     if (triggerRegex !== undefined) rule.triggerRegex = triggerRegex;
+    if (triggerSource !== undefined) rule.triggerSource = triggerSource;
     if (responseType !== undefined) rule.responseType = responseType;
     if (responsePayload !== undefined) rule.responsePayload = responsePayload;
     if (priority !== undefined) rule.priority = priority;

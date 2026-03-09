@@ -11,6 +11,8 @@ interface BusinessData {
   logo: string | null;
   workHoursStart?: string | null;
   workHoursEnd?: string | null;
+  messagingLimited?: boolean;
+  messagingLimitReason?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +26,8 @@ export function Business() {
   const [logo, setLogo] = useState('');
   const [workHoursStart, setWorkHoursStart] = useState('');
   const [workHoursEnd, setWorkHoursEnd] = useState('');
+  const [messagingLimited, setMessagingLimited] = useState(false);
+  const [messagingLimitReason, setMessagingLimitReason] = useState<string | null>(null);
 
   useEffect(() => {
     setError('');
@@ -33,6 +37,8 @@ export function Business() {
         setLogo(data.logo ?? '');
         setWorkHoursStart(data.workHoursStart ?? '');
         setWorkHoursEnd(data.workHoursEnd ?? '');
+        setMessagingLimited(!!data.messagingLimited);
+        setMessagingLimitReason(data.messagingLimitReason ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gabim në ngarkim.'))
       .finally(() => setLoading(false));
@@ -57,6 +63,8 @@ export function Business() {
         setLogo(data.logo ?? '');
         setWorkHoursStart(data.workHoursStart ?? '');
         setWorkHoursEnd(data.workHoursEnd ?? '');
+        setMessagingLimited(!!data.messagingLimited);
+        setMessagingLimitReason(data.messagingLimitReason ?? null);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       })
@@ -75,6 +83,13 @@ export function Business() {
       <form onSubmit={handleSubmit} className="business-form">
         {error && <div className="auth-error">{error}</div>}
         {success && <div className="form-success">U ruajt me sukses.</div>}
+        {messagingLimited && (
+          <div className="auth-error">
+            Dërgimi i mesazheve për biznesin tuaj është aktualisht i kufizuar për shkak të aktivitetit të dyshimtë
+            (p.sh. volum i lartë ose raportime spam).{' '}
+            {messagingLimitReason || 'Ju lutemi kontaktoni suportin nëse mendoni që kjo është bërë gabimisht.'}
+          </div>
+        )}
         <label>
           Emri i biznesit
           <input
