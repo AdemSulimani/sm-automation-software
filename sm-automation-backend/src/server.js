@@ -25,9 +25,10 @@ const businessRoutes = require('./routes/businessRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONT_END_URL || 'http://localhost:5173';
 
-// CORS – lejon kërkesat nga frontendi (localhost:5173)
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+// CORS – lejon kërkesat nga frontendi (varur nga FRONT_END_URL)
+app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 
 // Middleware për JSON
 app.use(express.json());
