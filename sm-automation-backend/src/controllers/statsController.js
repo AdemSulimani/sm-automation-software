@@ -7,6 +7,7 @@ const Channel = require('../models/Channel');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Business = require('../models/Business');
+const OutboundJob = require('../models/OutboundJob');
 
 /**
  * Kthen listën e channelIds që përdoruesi ka të drejtë të shohë (sipas userId ose businessId).
@@ -166,4 +167,87 @@ const getOverview = async (req, res, next) => {
   }
 };
 
-module.exports = { getStats, getOverview };
+/**
+ * GET /api/stats/rate-limit – statistika të thjeshta për rate limiting për channel-et e përdoruesit.
+ * Kthen për çdo channel: sa mesazhe OUT në 60 min e fundit dhe sa job-e pending/rate_limited në queue.
+ */
+const getRateLimitStats = async (req, res, next) => {
+  try {
+    const channelIds = await getChannelIdsForUser(req);
+    if (channelIds.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const since = new Date(Date.now() - 60 * 60 * 1000);
+    const channels = await Channel.find({ _id: { $in: channelIds } })
+      .select('_id name platform')
+      .lean();
+
+    const messagesAggr = await Message.aggregate([
+      {
+        $match: {
+          channelId: { $in: channelIds },
+          direction: 'out',
+          timestamp: { $gte: since },
+        },
+      },
+      {
+        $group: {
+          _id: '$channelId',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const jobsAggr = await OutboundJob.aggregate([
+      {
+        $match: {
+          channelId: { $in: channelIds },
+          status: { $in: ['pending', 'rate_limited'] },
+        },
+      },
+      {
+        $group: {
+          _id: { channelId: '$channelId', status: '$status' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const sentByChannel = new Map();
+    for (const m of messagesAggr) {
+      sentByChannel.set(String(m._id), m.count);
+    }
+
+    const jobsByChannel = new Map();
+    for (const j of jobsAggr) {
+      const chId = String(j._id.channelId);
+      const status = j._id.status;
+      if (!jobsByChannel.has(chId)) {
+        jobsByChannel.set(chId, { pending: 0, rate_limited: 0 });
+      }
+      if (status === 'pending') jobsByChannel.get(chId).pending += j.count;
+      if (status === 'rate_limited') jobsByChannel.get(chId).rate_limited += j.count;
+    }
+
+    const data = channels.map((ch) => {
+      const key = String(ch._id);
+      const messagesLastHour = sentByChannel.get(key) || 0;
+      const jobInfo = jobsByChannel.get(key) || { pending: 0, rate_limited: 0 };
+      return {
+        channelId: key,
+        name: ch.name || null,
+        platform: ch.platform,
+        messagesOutLastHour: messagesLastHour,
+        pendingJobs: jobInfo.pending,
+        rateLimitedJobs: jobInfo.rate_limited,
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getStats, getOverview, getRateLimitStats };

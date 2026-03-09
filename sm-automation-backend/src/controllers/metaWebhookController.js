@@ -39,8 +39,8 @@ async function verifyMetaWebhook(req, res, next) {
 }
 
 /**
- * Normalizon një mesazh nga payload-i Meta në format të brendshëm.
- * @returns { { channelId, senderId, messageText, platform, mid? } | null } ose null nëse nuk është mesazh i përpunueshëm
+ * Normalizon një mesazh DM nga payload-i Meta në format të brendshëm.
+ * @returns { { channelId, senderId, messageText, platform, mid?, triggerType } | null } ose null nëse nuk është mesazh i përpunueshëm
  */
 function normalizeMessengerOrInstagramMessage(entry, channel, messaging) {
   const message = messaging.message;
@@ -53,6 +53,34 @@ function normalizeMessengerOrInstagramMessage(entry, channel, messaging) {
     messageText: text || '',
     platform: channel.platform,
     mid: message.mid,
+    triggerType: 'dm',
+  };
+}
+
+/**
+ * Normalizon një klikim butoni / postback në Messenger/Instagram si trigger "button".
+ * @returns { { channelId, senderId, messageText, platform, triggerType, triggerMetadata } | null }
+ */
+function normalizeMessengerPostback(entry, channel, messaging) {
+  const postback = messaging.postback;
+  if (!postback) return null;
+  const senderId = messaging.sender && messaging.sender.id;
+  if (!senderId) return null;
+  const title = typeof postback.title === 'string' ? postback.title : '';
+  const payloadText = typeof postback.payload === 'string' ? postback.payload : '';
+  const text = title || payloadText;
+  if (!text) return null;
+  return {
+    channelId: channel._id,
+    senderId,
+    messageText: text,
+    platform: channel.platform,
+    triggerType: 'button',
+    triggerMetadata: {
+      type: 'postback',
+      title,
+      payload: payloadText,
+    },
   };
 }
 
@@ -69,6 +97,7 @@ function normalizeWhatsAppMessage(changeValue, channel, messageObj) {
     messageText,
     platform: 'whatsapp',
     mid: messageObj.id,
+    triggerType: 'dm',
   };
 }
 
@@ -86,7 +115,38 @@ async function findChannelByPlatformId(platform, pageOrPhoneId) {
 }
 
 /**
- * Parsjon payload-in e POST nga Meta dhe nxjerr mesazhet e normalizuar.
+ * Normalizon një event komentimi (comment) në një trigger "comment".
+ * Për typet konkrete të fushave (comment_id, post_id, etj.) lexohet nga change.value nëse ekzistojnë.
+ */
+function normalizeCommentTrigger(platform, channel, change) {
+  const value = change && change.value ? change.value : {};
+  const from = value.from || value.sender || {};
+  const senderId = from.id || from.sender_id;
+  const messageText =
+    typeof value.message === 'string'
+      ? value.message
+      : typeof value.text === 'string'
+        ? value.text
+        : '';
+  if (!senderId || !messageText) return null;
+  const commentId = value.comment_id || value.id || null;
+  const postId = value.post_id || value.post || value.media_id || null;
+  return {
+    channelId: channel._id,
+    senderId: String(senderId),
+    messageText,
+    platform,
+    triggerType: 'comment',
+    triggerMetadata: {
+      commentId,
+      postId,
+      field: change.field,
+    },
+  };
+}
+
+/**
+ * Parsjon payload-in e POST nga Meta dhe nxjerr eventet e normalizuar (DM, comments, story/button triggers).
  * Mbështet: object=page (Messenger), object=instagram, object=whatsapp_business_account.
  */
 async function parseMetaPayload(body) {
@@ -101,8 +161,22 @@ async function parseMetaPayload(body) {
       if (!channel) continue;
       const messagingList = entry.messaging || [];
       for (const messaging of messagingList) {
-        const normalized = normalizeMessengerOrInstagramMessage(entry, channel, messaging);
-        if (normalized) results.push(normalized);
+        if (messaging.message) {
+          const normalized = normalizeMessengerOrInstagramMessage(entry, channel, messaging);
+          if (normalized) results.push(normalized);
+        } else if (messaging.postback) {
+          const normalizedButton = normalizeMessengerPostback(entry, channel, messaging);
+          if (normalizedButton) results.push(normalizedButton);
+        }
+      }
+
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        if (!change || !change.field) continue;
+        if (change.field === 'comments' || change.field === 'feed') {
+          const normalizedComment = normalizeCommentTrigger('facebook', channel, change);
+          if (normalizedComment) results.push(normalizedComment);
+        }
       }
     }
     return results;
@@ -116,8 +190,22 @@ async function parseMetaPayload(body) {
       if (!channel) continue;
       const messagingList = entry.messaging || [];
       for (const messaging of messagingList) {
-        const normalized = normalizeMessengerOrInstagramMessage(entry, channel, messaging);
-        if (normalized) results.push(normalized);
+        if (messaging.message) {
+          const normalized = normalizeMessengerOrInstagramMessage(entry, channel, messaging);
+          if (normalized) results.push(normalized);
+        } else if (messaging.postback) {
+          const normalizedButton = normalizeMessengerPostback(entry, channel, messaging);
+          if (normalizedButton) results.push(normalizedButton);
+        }
+      }
+
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        if (!change || !change.field) continue;
+        if (change.field === 'comments' || change.field === 'mentions' || change.field === 'story_insights') {
+          const normalizedComment = normalizeCommentTrigger('instagram', channel, change);
+          if (normalizedComment) results.push(normalizedComment);
+        }
       }
     }
     return results;

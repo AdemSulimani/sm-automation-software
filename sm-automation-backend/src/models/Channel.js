@@ -42,9 +42,25 @@ const channelSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Informacione rreth token-it OAuth (p.sh. Meta long-lived)
+    tokenExpiresAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    tokenLastRefreshedAt: {
+      type: Date,
+      default: null,
+    },
+    tokenStatus: {
+      type: String,
+      enum: ['valid', 'invalid', 'needs_reconnect'],
+      default: 'valid',
+      index: true,
+    },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'pending'],
+      enum: ['active', 'inactive', 'pending', 'throttled', 'suspended'],
       default: 'active',
     },
     // Metadata opsional (emër faqeje, etj.)

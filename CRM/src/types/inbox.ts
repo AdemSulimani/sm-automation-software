@@ -21,6 +21,7 @@ export interface Conversation {
   platformUserId: string;
   platformConversationId: string | null;
   lastMessageAt: string | null;
+  lastUserMessageAt?: string | null;
   metadata: Record<string, unknown>;
   contactId?: string | ConversationContact | null;
   createdAt: string;

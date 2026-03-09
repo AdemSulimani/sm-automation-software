@@ -1,6 +1,7 @@
 /**
  * Modeli AutomationRule për rregullat e automatizuara për çdo channel.
  * Trigger: first_message, after_X_min, keyword_regex; responseType: text | template.
+ * triggerSource: kufizon nga çfarë lloj eventi (dm, comment, button, any) mund të ndizet rregulli.
  */
 
 const mongoose = require('mongoose');
@@ -16,6 +17,12 @@ const automationRuleSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: ['first_message', 'after_X_min', 'keyword_regex'],
+    },
+    // Burimi i eventit që lejohet ta ndezë rregullin: dm, comment, button, any.
+    triggerSource: {
+      type: String,
+      enum: ['any', 'dm', 'comment', 'button'],
+      default: 'any',
     },
     // Për after_X_min: vlera në minuta (opsional)
     triggerValue: {

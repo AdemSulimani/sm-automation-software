@@ -27,6 +27,21 @@ const conversationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Koha e fundit kur ka shkruar përdoruesi (mesazh INBOUND nga klienti)
+    lastUserMessageAt: {
+      type: Date,
+      default: null,
+    },
+    // Nëse platforma ka kthyer gabim që conversation është jashtë dritares së mesazheve (p.sh. Meta 24h)
+    messagingWindowExpired: {
+      type: Boolean,
+      default: false,
+    },
+    // Kur është marrë për herë të fundit ky gabim
+    lastWindowErrorAt: {
+      type: Date,
+      default: null,
+    },
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

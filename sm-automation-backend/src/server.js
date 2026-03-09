@@ -7,6 +7,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./config/database');
+const { startOutboundWorker } = require('./services/outboundQueueService');
+const { startTokenMonitor } = require('./services/tokenLifecycleService');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -57,4 +59,8 @@ connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Serveri në portën ${PORT}`);
   });
+  // Nis worker-in për dërgimin e mesazheve outbound me rate limiting
+  startOutboundWorker();
+  // Nis monitorin për jetën e token-ave (expiry / needs_reconnect)
+  startTokenMonitor();
 });
