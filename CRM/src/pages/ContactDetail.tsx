@@ -97,6 +97,18 @@ export function ContactDetail() {
             <dd>{contact.phone || '–'}</dd>
             <dt>Shënime</dt>
             <dd>{contact.notes || '–'}</dd>
+            <dt>Sentiment (klienti)</dt>
+            <dd>
+              {contact.sentimentLabel
+                ? contact.sentimentLabel === 'positive'
+                  ? 'Pozitiv'
+                  : contact.sentimentLabel === 'negative'
+                  ? 'Negativ'
+                  : contact.sentimentLabel === 'neutral'
+                  ? 'Neutral'
+                  : 'I përzier'
+                : 'Pa sentiment'}
+            </dd>
           </dl>
           <button type="button" className="btn-secondary" onClick={() => setEditing(true)}>
             Ndrysho

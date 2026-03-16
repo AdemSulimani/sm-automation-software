@@ -41,6 +41,20 @@ function getChannelLabel(conv: Conversation): string {
   return '–';
 }
 
+function getSentimentLabelText(label: Conversation['sentimentLabel']): string {
+  if (!label) return 'Pa sentiment';
+  if (label === 'positive') return 'Pozitiv';
+  if (label === 'negative') return 'Negativ';
+  if (label === 'neutral') return 'Neutral';
+  if (label === 'mixed') return 'I përzier';
+  return label;
+}
+
+function getSentimentBadgeClass(label: Conversation['sentimentLabel']): string {
+  if (!label) return 'sentiment-badge sentiment-badge--none';
+  return `sentiment-badge sentiment-badge--${label}`;
+}
+
 export function Inbox() {
   const { isAdmin } = useAuth();
   const [searchParams] = useSearchParams();
@@ -111,6 +125,9 @@ export function Inbox() {
               <Link to={`/app/inbox/${conv._id}`} className="conversation-row">
                 <span className="conv-user">{getDisplayUser(conv)}</span>
                 <span className="conv-channel">{getChannelLabel(conv)}</span>
+                <span className={getSentimentBadgeClass(conv.sentimentLabel)}>
+                  {getSentimentLabelText(conv.sentimentLabel)}
+                </span>
                 <span className="conv-date">{formatDate(conv.lastMessageAt)}</span>
               </Link>
             </li>

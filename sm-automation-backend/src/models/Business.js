@@ -70,6 +70,28 @@ const businessSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Fushat e sentiment-it në nivel biznesi (agregim nga kontaktet).
+    sentimentScore: {
+      type: Number,
+      default: null,
+      min: -1,
+      max: 1,
+      index: true,
+    },
+    sentimentLevel: {
+      type: String,
+      enum: ['none', 'negative', 'neutral', 'positive', 'mixed'],
+      default: 'none',
+      index: true,
+    },
+    sentimentFlags: {
+      type: [String],
+      default: [],
+    },
+    lastSentimentReviewAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

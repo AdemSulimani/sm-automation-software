@@ -16,6 +16,9 @@ interface FeedbackOverviewItem {
     timestamp: string;
     senderType: 'customer' | 'human_agent' | 'ai' | null;
     direction: 'in' | 'out';
+    sentimentScore?: number | null;
+    sentimentLabel?: 'negative' | 'neutral' | 'positive' | 'mixed' | null;
+    sentimentProvider?: string | null;
   } | null;
   conversation: {
     platformUserId: string;
@@ -72,6 +75,7 @@ export function FeedbackOverview() {
               <th>Klienti</th>
               <th>Kanal</th>
               <th>Mesazhi</th>
+              <th>Sentiment (modeli)</th>
               <th>Likes / Dislikes</th>
               <th>Rating mesatar</th>
               <th>Feedback-e gjithsej</th>
@@ -82,6 +86,7 @@ export function FeedbackOverview() {
             {items.map((item) => {
               const ch = item.conversation?.channel;
               const platformLabel = ch ? CHANNEL_PLATFORM_LABELS[ch.platform] : '–';
+              const sentimentLabel = item.message?.sentimentLabel;
               return (
                 <tr key={`${item.conversationId}-${item.messageId}`}>
                   <td>{item.conversation?.platformUserId ?? '–'}</td>
@@ -90,6 +95,17 @@ export function FeedbackOverview() {
                     {ch?.name ? `: ${ch.name}` : ''}
                   </td>
                   <td className="td-response">{getMessagePreview(item)}</td>
+                  <td>
+                    {sentimentLabel === 'positive'
+                      ? 'Pozitiv'
+                      : sentimentLabel === 'negative'
+                      ? 'Negativ'
+                      : sentimentLabel === 'neutral'
+                      ? 'Neutral'
+                      : sentimentLabel === 'mixed'
+                      ? 'I përzier'
+                      : '–'}
+                  </td>
                   <td>
                     👍 {item.likes} / 👎 {item.dislikes}
                   </td>

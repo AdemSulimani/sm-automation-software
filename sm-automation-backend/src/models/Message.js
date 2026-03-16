@@ -42,6 +42,29 @@ const messageSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    // Fushat e sentiment-it për mesazhet (vetëm për tekstet inbound nga klienti).
+    sentimentScore: {
+      type: Number,
+      default: null,
+      min: -1,
+      max: 1,
+      index: true,
+    },
+    sentimentLabel: {
+      type: String,
+      enum: ['negative', 'neutral', 'positive', 'mixed'],
+      default: null,
+      index: true,
+    },
+    sentimentProvider: {
+      type: String,
+      default: null,
+    },
+    sentimentAnalyzedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );

@@ -59,6 +59,30 @@ const conversationSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    // Fushat e sentiment-it në nivel konversacioni (agregim nga mesazhet inbound).
+    sentimentScore: {
+      type: Number,
+      default: null,
+      min: -1,
+      max: 1,
+      index: true,
+    },
+    sentimentLabel: {
+      type: String,
+      enum: ['negative', 'neutral', 'positive', 'mixed'],
+      default: null,
+      index: true,
+    },
+    lastSentimentAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    sentimentMessageCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );

@@ -347,7 +347,7 @@ const getFeedbackOverview = async (req, res, next) => {
 
     const [messages, conversations] = await Promise.all([
       Message.find({ _id: { $in: messageIds } })
-        .select('_id content timestamp conversationId senderType direction')
+        .select('_id content timestamp conversationId senderType direction sentimentScore sentimentLabel sentimentProvider')
         .lean(),
       Conversation.find({ _id: { $in: conversationIds } })
         .populate('channelId', 'name platform')
@@ -377,6 +377,9 @@ const getFeedbackOverview = async (req, res, next) => {
               timestamp: msg.timestamp,
               senderType: msg.senderType || null,
               direction: msg.direction,
+              sentimentScore: msg.sentimentScore ?? null,
+              sentimentLabel: msg.sentimentLabel || null,
+              sentimentProvider: msg.sentimentProvider || null,
             }
           : null,
         conversation: conv

@@ -8,6 +8,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Business = require('../models/Business');
 const OutboundJob = require('../models/OutboundJob');
+const { isSentimentEnabled } = require('../services/sentimentService');
 
 /**
  * Kthen listën e channelIds që përdoruesi ka të drejtë të shohë (sipas userId ose businessId).
@@ -82,7 +83,15 @@ const getOverview = async (req, res, next) => {
       .lean();
     const conversationIds = conversations.map((c) => c._id);
 
-    const [messagesIn, messagesOut, messagesForResponseTime, messagesByDayAggr, business] = await Promise.all([
+    const [
+      messagesIn,
+      messagesOut,
+      messagesForResponseTime,
+      messagesByDayAggr,
+      business,
+      sentimentAggr,
+      sentimentByDayAggr,
+    ] = await Promise.all([
       Message.countDocuments({
         conversationId: { $in: conversationIds },
         direction: 'in',
@@ -113,8 +122,44 @@ const getOverview = async (req, res, next) => {
         },
       ]),
       req.user.businessId
-        ? Business.findById(req.user.businessId).select('workHoursStart workHoursEnd').lean()
+        ? Business.findById(req.user.businessId).select('workHoursStart workHoursEnd sentimentScore sentimentLevel sentimentFlags lastSentimentReviewAt').lean()
         : Promise.resolve(null),
+      Message.aggregate([
+        {
+          $match: {
+            conversationId: { $in: conversationIds },
+            direction: 'in',
+            timestamp: dateFilter,
+            sentimentScore: { $ne: null },
+          },
+        },
+        {
+          $group: {
+            _id: '$sentimentLabel',
+            avgScore: { $avg: '$sentimentScore' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      Message.aggregate([
+        {
+          $match: {
+            conversationId: { $in: conversationIds },
+            direction: 'in',
+            timestamp: dateFilter,
+            sentimentScore: { $ne: null },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            },
+            avgScore: { $avg: '$sentimentScore' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
     ]);
 
     let avgResponseTimeMinutes = null;
@@ -150,6 +195,43 @@ const getOverview = async (req, res, next) => {
       .map(([date, v]) => ({ date, in: v.in, out: v.out }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    let sentimentAvgScore = null;
+    const sentimentDistribution = {
+      negative: 0,
+      neutral: 0,
+      positive: 0,
+      mixed: 0,
+    };
+
+    if (Array.isArray(sentimentAggr) && sentimentAggr.length > 0) {
+      let totalWeightedScore = 0;
+      let totalCount = 0;
+      for (const row of sentimentAggr) {
+        const label = row._id || 'neutral';
+        const count = row.count || 0;
+        const avgScore = row.avgScore || 0;
+        totalWeightedScore += avgScore * count;
+        totalCount += count;
+        if (label === 'negative' || label === 'neutral' || label === 'positive' || label === 'mixed') {
+          sentimentDistribution[label] += count;
+        }
+      }
+      if (totalCount > 0) {
+        sentimentAvgScore = totalWeightedScore / totalCount;
+      }
+    }
+
+    const sentimentByDay =
+      Array.isArray(sentimentByDayAggr) && sentimentByDayAggr.length > 0
+        ? sentimentByDayAggr
+            .map((row) => ({
+              date: row._id.date,
+              avgScore: row.avgScore,
+              count: row.count,
+            }))
+            .sort((a, b) => a.date.localeCompare(b.date))
+        : [];
+
     res.json({
       success: true,
       data: {
@@ -160,6 +242,20 @@ const getOverview = async (req, res, next) => {
         messagesByDay,
         workHoursStart: business?.workHoursStart ?? null,
         workHoursEnd: business?.workHoursEnd ?? null,
+        sentiment: {
+          enabled: isSentimentEnabled(),
+          avgScore: sentimentAvgScore,
+          distribution: sentimentDistribution,
+          byDay: sentimentByDay,
+          business: business
+            ? {
+                score: business.sentimentScore ?? null,
+                level: business.sentimentLevel ?? 'none',
+                flags: Array.isArray(business.sentimentFlags) ? business.sentimentFlags : [],
+                lastReviewAt: business.lastSentimentReviewAt ?? null,
+              }
+            : null,
+        },
       },
     });
   } catch (err) {

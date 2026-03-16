@@ -10,6 +10,7 @@ const { connectDB } = require('./config/database');
 const { startOutboundWorker } = require('./services/outboundQueueService');
 const { startTokenMonitor } = require('./services/tokenLifecycleService');
 const { startFraudWorker } = require('./services/fraudWorkerService');
+const { startSentimentWorker } = require('./services/sentimentWorkerService');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -69,4 +70,6 @@ connectDB().then(() => {
   startTokenMonitor();
   // Nis worker-in për vlerësimin periodik të rrezikut/fraud-it
   startFraudWorker();
+  // Nis worker-in për analizën e sentiment-it në mesazhet inbound
+  startSentimentWorker();
 });

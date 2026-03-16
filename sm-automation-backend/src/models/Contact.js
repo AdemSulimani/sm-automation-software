@@ -39,6 +39,30 @@ const contactSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // Fushat e sentiment-it në nivel kontakti (agregim nga konversacionet).
+    sentimentScore: {
+      type: Number,
+      default: null,
+      min: -1,
+      max: 1,
+      index: true,
+    },
+    sentimentLabel: {
+      type: String,
+      enum: ['negative', 'neutral', 'positive', 'mixed'],
+      default: null,
+      index: true,
+    },
+    sentimentAnalyzedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    sentimentMessageCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
