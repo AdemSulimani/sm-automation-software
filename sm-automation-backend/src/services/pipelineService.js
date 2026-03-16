@@ -66,12 +66,13 @@ async function getOrCreateConversation(channelId, senderId) {
 /**
  * Ruaj mesazh në Message (in ose out) për historik dhe kontekst AI.
  */
-async function saveMessage(conversationId, direction, content, platformMessageId = null) {
+async function saveMessage(conversationId, direction, content, platformMessageId = null, options = {}) {
   const payload =
     typeof content === 'string' ? { text: content } : content && typeof content === 'object' ? content : { text: '' };
   await Message.create({
     conversationId,
     direction,
+    senderType: options.senderType || null,
     content: payload,
     platformMessageId: platformMessageId || undefined,
   });
@@ -364,7 +365,7 @@ async function processIncomingMessage(normalizedMessage) {
     conversation.contactId = contactId;
   }
   const recentMessagesList = await getRecentMessagesForConversation(conversation._id);
-  await saveMessage(conversation._id, 'in', messageText || '', mid);
+  await saveMessage(conversation._id, 'in', messageText || '', mid, { senderType: 'customer' });
   await upsertConversationLastMessage(channelId, senderId, { isInbound: true });
 
   // Kur biznesi ka përgjigjur manual (botPaused), mos dërgo përgjigje automatike; çaktivizo pause që boti të përgjigjet te mesazhi i ardhshëm.
@@ -406,7 +407,7 @@ async function processIncomingMessage(normalizedMessage) {
         recipientId: String(senderId),
         payload: message,
       });
-      await saveMessage(conversation._id, 'out', message);
+      await saveMessage(conversation._id, 'out', message, null, { senderType: 'ai' });
       await upsertConversationLastMessage(channelId, senderId);
       return;
     }
@@ -443,7 +444,7 @@ async function processIncomingMessage(normalizedMessage) {
         recipientId: String(senderId),
         payload: message,
       });
-      await saveMessage(conversation._id, 'out', message);
+      await saveMessage(conversation._id, 'out', message, null, { senderType: 'ai' });
       await upsertConversationLastMessage(channelId, senderId);
       return;
     }
@@ -478,7 +479,7 @@ async function processIncomingMessage(normalizedMessage) {
     recipientId: String(senderId),
     payload: { text: aiReply },
   });
-  await saveMessage(conversation._id, 'out', { text: aiReply });
+  await saveMessage(conversation._id, 'out', { text: aiReply }, null, { senderType: 'ai' });
   await upsertConversationLastMessage(channelId, senderId);
 }
 

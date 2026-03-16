@@ -26,6 +26,10 @@ export interface Conversation {
   contactId?: string | ConversationContact | null;
   createdAt: string;
   updatedAt: string;
+  sentimentScore?: number | null;
+  sentimentLabel?: 'negative' | 'neutral' | 'positive' | 'mixed' | null;
+  lastSentimentAt?: string | null;
+  sentimentMessageCount?: number;
 }
 
 export interface Message {
@@ -36,6 +40,10 @@ export interface Message {
   timestamp: string;
   platformMessageId: string | null;
   senderType?: 'customer' | 'human_agent' | 'ai' | null;
+  sentimentScore?: number | null;
+  sentimentLabel?: 'negative' | 'neutral' | 'positive' | 'mixed' | null;
+  sentimentProvider?: string | null;
+  sentimentAnalyzedAt?: string | null;
 }
 
 export interface ConversationWithMessages {

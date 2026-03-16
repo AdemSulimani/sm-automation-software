@@ -31,6 +31,22 @@ function getChannelLabel(conv: ConversationWithMessages['conversation']): string
   return '–';
 }
 
+function getSentimentLabelText(label: Message['sentimentLabel'] | ConversationWithMessages['conversation']['sentimentLabel']) {
+  if (!label) return 'Pa sentiment';
+  if (label === 'positive') return 'Pozitiv';
+  if (label === 'negative') return 'Negativ';
+  if (label === 'neutral') return 'Neutral';
+  if (label === 'mixed') return 'I përzier';
+  return label;
+}
+
+function getSentimentBadgeClass(
+  label: Message['sentimentLabel'] | ConversationWithMessages['conversation']['sentimentLabel']
+) {
+  if (!label) return 'sentiment-badge sentiment-badge--none';
+  return `sentiment-badge sentiment-badge--${label}`;
+}
+
 export function InboxThread() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [data, setData] = useState<ConversationWithMessages | null>(null);
@@ -41,7 +57,7 @@ export function InboxThread() {
   const [sendSuccess, setSendSuccess] = useState(false);
   const [feedbackList, setFeedbackList] = useState<any[] | null>(null);
   const [feedbackError, setFeedbackError] = useState('');
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [, setFeedbackLoading] = useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState<{
@@ -174,6 +190,13 @@ export function InboxThread() {
           Bisedë me {conversation.platformUserId}
           <span className="thread-channel">{getChannelLabel(conversation)}</span>
         </h1>
+        {conversation.sentimentLabel && (
+          <div className="thread-sentiment">
+            <span className={getSentimentBadgeClass(conversation.sentimentLabel)}>
+              {getSentimentLabelText(conversation.sentimentLabel)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="thread-messages">
@@ -192,6 +215,11 @@ export function InboxThread() {
                 {' · '}
                 {formatMessageTime(m.timestamp)}
               </span>
+              {m.direction === 'in' && m.sentimentLabel && (
+                <span className={getSentimentBadgeClass(m.sentimentLabel)}>
+                  {getSentimentLabelText(m.sentimentLabel)}
+                </span>
+              )}
               {m.direction === 'out' && (m.senderType === 'ai' || m.senderType === 'human_agent') && (
                 <div className="message-feedback-row">
                   <button

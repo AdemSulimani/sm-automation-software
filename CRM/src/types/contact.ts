@@ -11,6 +11,10 @@ export interface Contact {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  sentimentScore?: number | null;
+  sentimentLabel?: 'negative' | 'neutral' | 'positive' | 'mixed' | null;
+  sentimentAnalyzedAt?: string | null;
+  sentimentMessageCount?: number;
 }
 
 export interface ContactIdentity {
@@ -28,5 +32,9 @@ export interface ContactDetail {
     channelId: string | { _id: string; name: string | null; platform: string };
     platformUserId: string;
     lastMessageAt: string | null;
+    sentimentScore?: number | null;
+    sentimentLabel?: 'negative' | 'neutral' | 'positive' | 'mixed' | null;
+    lastSentimentAt?: string | null;
+    sentimentMessageCount?: number;
   }>;
 }

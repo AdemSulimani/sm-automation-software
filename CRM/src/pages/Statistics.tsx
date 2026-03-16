@@ -17,6 +17,23 @@ interface OverviewData {
   messagesByDay: Array<{ date: string; in: number; out: number }>;
   workHoursStart: string | null;
   workHoursEnd: string | null;
+  sentiment?: {
+    enabled: boolean;
+    avgScore: number | null;
+    distribution: {
+      negative: number;
+      neutral: number;
+      positive: number;
+      mixed: number;
+    };
+    byDay: Array<{ date: string; avgScore: number; count: number }>;
+    business: {
+      score: number | null;
+      level: 'none' | 'negative' | 'neutral' | 'positive' | 'mixed';
+      flags: string[];
+      lastReviewAt: string | null;
+    } | null;
+  };
 }
 
 interface UserOption {
@@ -88,7 +105,7 @@ export function Statistics() {
     <div className="page-statistics">
       <h1>Statistika dhe raport</h1>
       <p className="page-statistics-hint">
-        Mesazhe hyrëse dhe dalëse, kohë mesatare përgjigjeje dhe shpërndarja sipas ditëve.
+        Mesazhe hyrëse dhe dalëse, kohë mesatare përgjigjeje, sentiment i klientëve dhe shpërndarja sipas ditëve.
       </p>
 
       {isAdmin && users.length > 0 && (
@@ -160,6 +177,14 @@ export function Statistics() {
               </span>
               <span className="dashboard-stat-label">Koha mesatare përgjigjeje</span>
             </div>
+            {data.sentiment && (
+              <div className="dashboard-stat-card">
+                <span className="dashboard-stat-value">
+                  {data.sentiment.avgScore != null ? data.sentiment.avgScore.toFixed(2) : '–'}
+                </span>
+                <span className="dashboard-stat-label">Sentimenti mesatar (mesazhe hyrëse)</span>
+              </div>
+            )}
           </div>
 
           {(data.workHoursStart || data.workHoursEnd) && (
@@ -191,6 +216,30 @@ export function Statistics() {
                       <td>{formatDateLabel(row.date)}</td>
                       <td>{row.in}</td>
                       <td>{row.out}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {data.sentiment && data.sentiment.byDay.length > 0 && (
+            <section className="statistics-by-day">
+              <h2>Sentiment sipas ditëve</h2>
+              <table className="table-statistics">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Sentiment mesatar</th>
+                    <th>Mesazhe me sentiment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.sentiment.byDay.map((row) => (
+                    <tr key={row.date}>
+                      <td>{formatDateLabel(row.date)}</td>
+                      <td>{row.avgScore != null ? row.avgScore.toFixed(2) : '–'}</td>
+                      <td>{row.count}</td>
                     </tr>
                   ))}
                 </tbody>

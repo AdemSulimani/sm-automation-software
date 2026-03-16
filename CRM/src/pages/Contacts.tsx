@@ -97,6 +97,17 @@ export function Contacts() {
                 <span className="contact-name">{displayName(c)}</span>
                 {c.email && <span className="contact-email">{c.email}</span>}
                 {c.phone && <span className="contact-phone">{c.phone}</span>}
+                {c.sentimentLabel && (
+                  <span className={`sentiment-badge sentiment-badge--${c.sentimentLabel}`}>
+                    {c.sentimentLabel === 'positive'
+                      ? 'Pozitiv'
+                      : c.sentimentLabel === 'negative'
+                      ? 'Negativ'
+                      : c.sentimentLabel === 'neutral'
+                      ? 'Neutral'
+                      : 'I përzier'}
+                  </span>
+                )}
               </Link>
             </li>
           ))}
