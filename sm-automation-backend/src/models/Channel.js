@@ -75,6 +75,11 @@ const channelSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // Shënues për rrezik/fraud në nivel kanali (p.sh. shumë gabime spam).
+    fraudFlags: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

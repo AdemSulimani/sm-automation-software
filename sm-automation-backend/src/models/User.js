@@ -44,6 +44,28 @@ const userSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    // Fusha bazë për monitorim rreziku/fraud për përdoruesin.
+    fraudScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+      index: true,
+    },
+    fraudLevel: {
+      type: String,
+      enum: ['none', 'low', 'medium', 'high'],
+      default: 'none',
+      index: true,
+    },
+    fraudFlags: {
+      type: [String],
+      default: [],
+    },
+    suspiciousActivityAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

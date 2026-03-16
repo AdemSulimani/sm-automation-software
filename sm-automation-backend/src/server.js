@@ -9,6 +9,7 @@ const cors = require('cors');
 const { connectDB } = require('./config/database');
 const { startOutboundWorker } = require('./services/outboundQueueService');
 const { startTokenMonitor } = require('./services/tokenLifecycleService');
+const { startFraudWorker } = require('./services/fraudWorkerService');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -66,4 +67,6 @@ connectDB().then(() => {
   startOutboundWorker();
   // Nis monitorin për jetën e token-ave (expiry / needs_reconnect)
   startTokenMonitor();
+  // Nis worker-in për vlerësimin periodik të rrezikut/fraud-it
+  startFraudWorker();
 });

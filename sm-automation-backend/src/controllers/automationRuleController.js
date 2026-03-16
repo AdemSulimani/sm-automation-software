@@ -5,6 +5,8 @@
 
 const Channel = require('../models/Channel');
 const AutomationRule = require('../models/AutomationRule');
+const Business = require('../models/Business');
+const { getEnforcementForFraudLevel } = require('../services/fraudService');
 
 /** Admin mund të aksesojë çdo channel; klienti vetëm channelet e veta. */
 const ensureUserCanAccessChannel = async (req, channelId) => {
@@ -76,6 +78,20 @@ const create = async (req, res, next) => {
     const channel = await ensureUserCanAccessChannel(req, channelId);
     if (!channel) {
       return res.status(404).json({ success: false, message: 'Kanali nuk u gjet ose nuk ju përket.' });
+    }
+    if (channel.businessId) {
+      const business = await Business.findById(channel.businessId)
+        .select('fraudLevel')
+        .lean();
+      const enforcement = getEnforcementForFraudLevel(business?.fraudLevel || 'none');
+      if (!enforcement.allowNewAutomationRules) {
+        return res.status(400).json({
+          success: false,
+          code: 'business_fraud_restricted_for_automation',
+          message:
+            'Ky biznes është nën kufizim për krijimin e rregullave të reja të automatizimit për shkak të rrezikut të lartë të abuzimit.',
+        });
+      }
     }
     const rule = await AutomationRule.create({
       channelId,
