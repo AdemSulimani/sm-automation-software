@@ -9,6 +9,7 @@ const Channel = require('../models/Channel');
 const Business = require('../models/Business');
 const { enqueueOutboundMessage } = require('../services/outboundQueueService');
 const { canSendMessageWithin24h } = require('../services/messageWindowService');
+const { getEnforcementForFraudLevel } = require('../services/fraudService');
 
 /**
  * Përcakton nëse përdoruesi ka të drejtë të aksesojë një channel.
@@ -149,13 +150,25 @@ const postMessage = async (req, res, next) => {
     }
 
     if (channel.businessId) {
-      const business = await Business.findById(channel.businessId).select('messagingLimited').lean();
+      const business = await Business.findById(channel.businessId)
+        .select('messagingLimited fraudLevel')
+        .lean();
       if (business && business.messagingLimited) {
         return res.status(400).json({
           success: false,
           code: 'business_limited',
           message:
             'Ky biznes është përkohësisht i kufizuar për dërgim mesazhesh për shkak të aktivitetit të dyshimtë. Ju lutemi kontaktoni suportin.',
+        });
+      }
+
+      const enforcement = getEnforcementForFraudLevel(business?.fraudLevel || 'none');
+      if (!enforcement.allowOutboundMessages) {
+        return res.status(400).json({
+          success: false,
+          code: 'business_fraud_restricted',
+          message:
+            'Ky biznes është nën kufizim për shkak të rrezikut të lartë të abuzimit me mesazhe. Ju lutemi kontaktoni suportin për rishikim.',
         });
       }
     }

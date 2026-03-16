@@ -48,6 +48,28 @@ const businessSchema = new mongoose.Schema(
       min: 30,
       max: 3650,
     },
+    // Vlerësim i rrezikut/fraud-it për biznesin.
+    fraudScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+      index: true,
+    },
+    fraudLevel: {
+      type: String,
+      enum: ['none', 'low', 'medium', 'high'],
+      default: 'none',
+      index: true,
+    },
+    fraudFlags: {
+      type: [String],
+      default: [],
+    },
+    lastFraudReviewAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

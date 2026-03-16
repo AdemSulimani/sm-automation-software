@@ -8,6 +8,7 @@ const OAuthMetaSession = require('../models/OAuthMetaSession');
 const Channel = require('../models/Channel');
 const metaOAuthService = require('../services/metaOAuthService');
 const { encrypt } = require('../services/tokenEncryption');
+const { scoreChannelBehavior, scoreBusinessActivity } = require('../services/fraudService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sm-automation-secret';
 
@@ -203,6 +204,22 @@ async function createChannelFromOAuth(req, res, next) {
     });
     const data = channel.toObject();
     data.accessToken = '***';
+
+    // Pas krijimit të kanalit, ekzekuto vlerësim të sjelljes së kanalit/biznesit (passive mode).
+    scoreChannelBehavior(channel._id)
+      .then(() => {
+        if (channel.businessId) {
+          return scoreBusinessActivity(channel.businessId);
+        }
+        return null;
+      })
+      .catch((fraudErr) => {
+        console.warn('Fraud scoring after channel creation failed (non-blocking)', {
+          channelId: String(channel._id),
+          businessId: channel.businessId ? String(channel.businessId) : null,
+          error: fraudErr && fraudErr.message,
+        });
+      });
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);

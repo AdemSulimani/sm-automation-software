@@ -9,6 +9,7 @@
 const { Channel, OutboundJob, Message } = require('../models');
 const { sendMessage } = require('./outboundService');
 const { evaluateBusinessRiskForChannel } = require('./riskService');
+const { scoreChannelBehavior } = require('./fraudService');
 
 // Limit bazë: 200 mesazhe në orë për channel/page (mund të bëhet konfig i ardhshëm)
 const DEFAULT_RATE_LIMIT_PER_HOUR = Number(process.env.META_RATE_LIMIT_PER_HOUR || '200');
@@ -157,6 +158,14 @@ async function processOutboundJobsBatch() {
           $set: { status: 'failed_permanent', lastError: message },
         }).exec();
         await evaluateBusinessRiskForChannel(job.channelId);
+        // Vlerëso sjelljen e kanalit (fraud) kur kemi dështim permanent.
+        scoreChannelBehavior(job.channelId).catch((fraudErr) => {
+          console.warn('Fraud scoring on failed_permanent outbound job failed (non-blocking)', {
+            jobId: String(job._id),
+            channelId: String(job.channelId),
+            error: fraudErr && fraudErr.message,
+          });
+        });
         console.warn('Outbound job marked as failed_permanent', {
           jobId: String(job._id),
           channelId: String(job.channelId),

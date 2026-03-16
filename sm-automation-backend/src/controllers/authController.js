@@ -14,6 +14,7 @@ const AutomationRule = require('../models/AutomationRule');
 const KeywordResponse = require('../models/KeywordResponse');
 const OAuthMetaSession = require('../models/OAuthMetaSession');
 const jwt = require('jsonwebtoken');
+const { scoreBusinessActivity, scoreUserActivity } = require('../services/fraudService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'sm-automation-secret', {
@@ -31,8 +32,24 @@ const register = async (req, res, next) => {
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Ky email është i zënë.' });
     }
-    const business = await Business.create({ name: (name && name.trim()) ? `${name.trim()} – Biznes` : 'Biznesi im' });
+    const business = await Business.create({
+      name: (name && name.trim()) ? `${name.trim()} – Biznes` : 'Biznesi im',
+    });
     const user = await User.create({ name, email, password, businessId: business._id });
+
+    // Pas krijimit, shkallëzo një vlerësim bazë të aktivitetit për biznesin/përdoruesin (passive mode).
+    try {
+      await Promise.all([
+        scoreBusinessActivity(business._id),
+        scoreUserActivity(user._id),
+      ]);
+    } catch (fraudErr) {
+      console.warn('Fraud scoring on register failed (non-blocking)', {
+        userId: String(user._id),
+        businessId: String(business._id),
+        error: fraudErr && fraudErr.message,
+      });
+    }
     const token = generateToken(user._id);
     res.status(201).json({
       success: true,
@@ -52,9 +69,26 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
+      // Rrit rrezikun për përdoruesin nëse ekziston, në rast tentativash të dështuara.
+      if (user) {
+        scoreUserActivity(user._id, { failedLoginIncrement: 5 }).catch((fraudErr) => {
+          console.warn('Fraud scoring on failed login failed (non-blocking)', {
+            userId: String(user._id),
+            error: fraudErr && fraudErr.message,
+          });
+        });
+      }
       return res.status(401).json({ success: false, message: 'Email ose fjalëkalim i gabuar.' });
     }
     const token = generateToken(user._id);
+
+    // Scoring pas një login-i të suksesshëm (p.sh. për të ulur pak rrezikun nëse ka sjellje të qëndrueshme).
+    scoreUserActivity(user._id).catch((fraudErr) => {
+      console.warn('Fraud scoring on login failed (non-blocking)', {
+        userId: String(user._id),
+        error: fraudErr && fraudErr.message,
+      });
+    });
     res.json({
       success: true,
       data: { id: user._id, name: user.name, email: user.email, role: user.role || 'client' },
