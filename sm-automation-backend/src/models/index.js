@@ -12,6 +12,7 @@ const OAuthMetaSession = require('./OAuthMetaSession');
 const Contact = require('./Contact');
 const ContactIdentity = require('./ContactIdentity');
 const Business = require('./Business');
+const Feedback = require('./Feedback');
 const OutboundJob = require('./OutboundJob');
 
 module.exports = {
@@ -26,4 +27,5 @@ module.exports = {
   Contact,
   ContactIdentity,
   OutboundJob,
+  Feedback,
 };

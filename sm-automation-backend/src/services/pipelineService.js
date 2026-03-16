@@ -11,6 +11,7 @@ const {
   Conversation,
   User,
   Message,
+  Feedback,
 } = require('../models');
 const { enqueueOutboundMessage } = require('./outboundQueueService');
 const { getReply } = require('./aiService');
@@ -89,6 +90,96 @@ async function getRecentMessagesForConversation(conversationId, limit = RECENT_M
     direction: m.direction,
     content: m.content,
   }));
+}
+
+/**
+ * Nxjerr udhëzime të shkurtra për AI bazuar në feedback-un e fundit për këtë biznes/channel.
+ * Përdoret për të ndërtuar persona-n / preferencat pa pasur nevojë për ndryshim modeli.
+ *
+ * @param {object} channel - Dokumenti Channel (me businessId, userId)
+ * @returns {Promise<string>} – tekst i shkurtër udhëzimesh (mund të jetë bosh nëse nuk ka feedback)
+ */
+async function getFeedbackGuidelinesForChannel(channel) {
+  if (!channel) return '';
+
+  const match = {
+    channelId: channel._id,
+  };
+  if (channel.businessId) {
+    match.businessId = channel.businessId;
+  }
+
+  if (channel.businessId) {
+    const Business = require('../models/Business');
+    const business = await Business.findById(channel.businessId).select('aiLearningFromFeedbackEnabled').lean();
+    if (business && business.aiLearningFromFeedbackEnabled === false) {
+      return '';
+    }
+  }
+
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  match.createdAt = { $gte: fromDate, $lte: now };
+
+  const aggr = await Feedback.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: {
+          reasonCategory: '$reasonCategory',
+          sentiment: '$sentiment',
+        },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  if (!aggr.length) return '';
+
+  const dislikes = {};
+  const likes = {};
+  for (const row of aggr) {
+    const key = row._id.reasonCategory || 'other';
+    if (row._id.sentiment === 'dislike') {
+      dislikes[key] = (dislikes[key] || 0) + row.count;
+    } else if (row._id.sentiment === 'like') {
+      likes[key] = (likes[key] || 0) + row.count;
+    }
+  }
+
+  const parts = [];
+
+  if (dislikes.too_long || likes.too_short) {
+    parts.push(
+      'Përgjigjet duhet të jenë të shkurtra dhe konkrete; shmang tekstet shumë të gjata dhe të mbushura me përsëritje.'
+    );
+  }
+  if (dislikes.too_short || likes.too_long) {
+    parts.push(
+      'Sigurohu që përgjigjet të jenë mjaftueshëm të detajuara dhe të shpjegojnë hapat / opsionet kryesore.'
+    );
+  }
+  if (dislikes.tone_too_informal) {
+    parts.push('Përdor një ton më formal dhe profesional; shmang zhargonin dhe emoji-t e tepërt.');
+  }
+  if (dislikes.tone_too_formal) {
+    parts.push('Përdor një ton më miqësor dhe të afërt, pa qenë tepër rigid.');
+  }
+  if (dislikes.wrong_information) {
+    parts.push('Mos shpik informacione; nëse nuk je i sigurt, thuaj që nuk ke të dhëna të mjaftueshme.');
+  }
+  if (dislikes.did_not_answer_question) {
+    parts.push('Gjithmonë adreson direkt pyetjen kryesore të klientit, pastaj shto detaje shtesë nëse është e nevojshme.');
+  }
+
+  if (!parts.length) {
+    return '';
+  }
+
+  return (
+    'Bazuar në feedback-un e fundit të këtij biznesi, ndiq këto udhëzime kur përgjigjesh klientëve:\n\n' +
+    parts.map((p) => `- ${p}`).join('\n')
+  );
 }
 
 /**
@@ -368,7 +459,8 @@ async function processIncomingMessage(normalizedMessage) {
   const aiReply = await getReply(
     pipelineCtx.messageText,
     conversationContext,
-    companyInfoText
+    companyInfoText,
+    await getFeedbackGuidelinesForChannel(channel)
   );
   const windowCheck = canSendMessageWithin24h({ conversation, channel, direction: 'out' });
   if (!windowCheck.allowed) {

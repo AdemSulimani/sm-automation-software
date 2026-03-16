@@ -17,6 +17,16 @@ const messageSchema = new mongoose.Schema(
       required: true,
       enum: ['in', 'out'],
     },
+    // Kush e ka dërguar mesazhin (për feedback dhe analiza):
+    // - 'customer'     -> mesazh hyrës nga klienti final
+    // - 'human_agent'  -> mesazh dalës nga një agjent njerëzor në Inbox
+    // - 'ai'           -> mesazh dalës i gjeneruar nga AI
+    senderType: {
+      type: String,
+      enum: ['customer', 'human_agent', 'ai'],
+      default: null,
+      index: true,
+    },
     content: {
       type: mongoose.Schema.Types.Mixed,
       required: true,

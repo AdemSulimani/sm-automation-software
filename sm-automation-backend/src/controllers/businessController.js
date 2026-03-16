@@ -43,12 +43,20 @@ const updateMe = async (req, res, next) => {
     if (!user || !user.businessId) {
       return res.status(404).json({ success: false, message: 'Biznesi nuk u gjet. Hapni një herë faqen e biznesit.' });
     }
-    const { name, logo, workHoursStart, workHoursEnd } = req.body;
+    const { name, logo, workHoursStart, workHoursEnd, feedbackEnabled, aiLearningFromFeedbackEnabled, feedbackRetentionDays } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = name && String(name).trim() ? String(name).trim() : 'Biznesi im';
     if (logo !== undefined) updates.logo = logo && String(logo).trim() ? String(logo).trim() : null;
     if (workHoursStart !== undefined) updates.workHoursStart = workHoursStart && String(workHoursStart).trim() ? String(workHoursStart).trim() : null;
     if (workHoursEnd !== undefined) updates.workHoursEnd = workHoursEnd && String(workHoursEnd).trim() ? String(workHoursEnd).trim() : null;
+    if (feedbackEnabled !== undefined) updates.feedbackEnabled = !!feedbackEnabled;
+    if (aiLearningFromFeedbackEnabled !== undefined) updates.aiLearningFromFeedbackEnabled = !!aiLearningFromFeedbackEnabled;
+    if (feedbackRetentionDays !== undefined) {
+      const days = Number(feedbackRetentionDays);
+      if (Number.isFinite(days) && days >= 30 && days <= 3650) {
+        updates.feedbackRetentionDays = days;
+      }
+    }
     const business = await Business.findByIdAndUpdate(user.businessId, updates, {
       new: true,
       runValidators: true,

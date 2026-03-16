@@ -32,6 +32,22 @@ const businessSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Konfigurim për feedback-un dhe mësimin nga AI për këtë biznes.
+    feedbackEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    aiLearningFromFeedbackEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    // Sa ditë mbahen të dhënat e feedback-ut për këtë biznes (mund të përdoret më vonë për pastrim).
+    feedbackRetentionDays: {
+      type: Number,
+      default: 365,
+      min: 30,
+      max: 3650,
+    },
   },
   { timestamps: true }
 );

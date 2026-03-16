@@ -27,6 +27,7 @@ export const navItems: NavItem[] = [
   { path: '/app/settings', label: 'Cilësime', role: 'client' },
   { path: '/app/statistics', label: 'Statistika', role: 'client' },
   { path: '/app/chatbot', label: 'Chatbot ON/OFF', role: 'client' },
+  { path: '/app/feedback', label: 'Feedback & Cilësi', role: 'client' },
   // Vetëm admin
   { path: '/app/klientet', label: 'Klientët', role: 'admin' },
   { path: '/app/manual-reply', label: 'Përgjigje manuale', role: 'admin' },
