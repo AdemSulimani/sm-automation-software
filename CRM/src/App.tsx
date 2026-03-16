@@ -22,6 +22,7 @@ import {
   Profile,
   Business,
   Statistics,
+  FeedbackOverview,
 } from './pages';
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="business" element={<Business />} />
         <Route path="statistics" element={<Statistics />} />
+        <Route path="feedback" element={<FeedbackOverview />} />
         <Route path="channels" element={<Channels />} />
         <Route path="channels/:channelId" element={<ChannelDetail />} />
         <Route path="inbox" element={<Inbox />} />

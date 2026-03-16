@@ -18,15 +18,16 @@ function getGroqChatUrl() {
  * @param {string} messageText - Teksti i mesazhit hyrës
  * @param {object} [conversationContext] - Kontekst opsional (historik mesazhesh, metadata)
  * @param {string} [companyInfo] - Informacione/udhëzime për kompaninë (nga Channel.aiInstructions ose User.companyInfo)
+ * @param {string} [feedbackGuidelines] - Udhëzime të nxjerra nga feedback-u (p.sh. preferenca për tonin, gjatësinë, etj.)
  * @returns {Promise<string>} Teksti i përgjigjes
  */
-async function getReply(messageText, conversationContext = {}, companyInfo = '') {
+async function getReply(messageText, conversationContext = {}, companyInfo = '', feedbackGuidelines = '') {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
     return getFallbackReply();
   }
   try {
-    return await getGroqReply(apiKey, messageText, conversationContext, companyInfo);
+    return await getGroqReply(apiKey, messageText, conversationContext, companyInfo, feedbackGuidelines);
   } catch (err) {
     console.error('AI service Groq error:', err.message);
     return getFallbackReply();
@@ -43,18 +44,23 @@ function buildSystemMessage(companyInfoText) {
 
 /**
  * Thirr Groq Chat Completions API (Llama).
- * Radha e mesazheve: [system me companyInfo], [recentMessages], [mesazhi i ri i përdoruesit].
+ * Radha e mesazheve: [system me companyInfo + feedbackGuidelines], [recentMessages], [mesazhi i ri i përdoruesit].
  */
-async function getGroqReply(apiKey, messageText, conversationContext, companyInfo = '') {
+async function getGroqReply(apiKey, messageText, conversationContext, companyInfo = '', feedbackGuidelines = '') {
   const messages = [];
   const infoText =
     typeof companyInfo === 'string' && companyInfo.trim()
       ? companyInfo.trim()
       : '';
-  if (infoText) {
+  const feedbackText =
+    typeof feedbackGuidelines === 'string' && feedbackGuidelines.trim()
+      ? feedbackGuidelines.trim()
+      : '';
+  const combinedInfo = [infoText, feedbackText].filter(Boolean).join('\n\n');
+  if (combinedInfo) {
     messages.push({
       role: 'system',
-      content: buildSystemMessage(infoText),
+      content: buildSystemMessage(combinedInfo),
     });
   }
   if (conversationContext.recentMessages && Array.isArray(conversationContext.recentMessages)) {

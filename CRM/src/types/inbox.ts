@@ -35,6 +35,7 @@ export interface Message {
   content: { text?: string; [k: string]: unknown };
   timestamp: string;
   platformMessageId: string | null;
+  senderType?: 'customer' | 'human_agent' | 'ai' | null;
 }
 
 export interface ConversationWithMessages {
