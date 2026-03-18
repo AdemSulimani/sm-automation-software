@@ -22,7 +22,7 @@ export function Register() {
     setLoading(true);
     try {
       await register(name, email, password);
-      navigate('/company-setup', { replace: true });
+      navigate('/onboarding/company', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim në regjistrim.');
     } finally {

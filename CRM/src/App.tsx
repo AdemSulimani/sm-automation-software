@@ -4,6 +4,7 @@ import { Layout, ProtectedRoute, AdminRoute } from './components';
 import {
   Login,
   Register,
+  CompanyOnboarding,
   Landing,
   Privacy,
   Terms,
@@ -23,7 +24,6 @@ import {
   Business,
   Statistics,
   FeedbackOverview,
-  CompanySetup,
 } from './pages';
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -47,12 +47,14 @@ function AppRoutes() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-      <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+      {/* Register qëndron i hapur edhe kur user-i sapo është autentikuar,
+          që të mos pengohet ridrejtimi tek onboarding pas regjistrimit. */}
+      <Route path="/register" element={<Register />} />
       <Route
-        path="/company-setup"
+        path="/onboarding/company"
         element={
           <ProtectedRoute>
-            <CompanySetup />
+            <CompanyOnboarding />
           </ProtectedRoute>
         }
       />
