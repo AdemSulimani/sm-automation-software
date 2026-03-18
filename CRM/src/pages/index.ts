@@ -22,3 +22,4 @@ export { Profile } from './Profile';
 export { Business } from './Business';
 export { Statistics } from './Statistics';
 export { Placeholder } from './Placeholder';
+export { CompanySetup } from './CompanySetup';

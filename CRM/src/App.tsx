@@ -23,6 +23,7 @@ import {
   Business,
   Statistics,
   FeedbackOverview,
+  CompanySetup,
 } from './pages';
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +48,14 @@ function AppRoutes() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+      <Route
+        path="/company-setup"
+        element={
+          <ProtectedRoute>
+            <CompanySetup />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/app"
         element={

@@ -113,6 +113,22 @@ body {
   cursor: not-allowed;
 }
 
+.company-setup-card {
+  max-width: 28rem;
+}
+
+.company-setup-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 4rem;
+}
+
 .auth-error {
   margin-bottom: 1rem;
   padding: 0.5rem 0.75rem;
